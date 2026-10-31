@@ -19,6 +19,9 @@ public enum TrashService {
     }
 
     public static func deleteOne(_ url: URL, mode: DeletionMode) -> DeleteOutcome {
+        if let refusal = refusalReason(for: url) {
+            return DeleteOutcome(url: url, success: false, message: refusal)
+        }
         do {
             switch mode {
             case .trash:
@@ -30,6 +33,21 @@ public enum TrashService {
         } catch {
             return DeleteOutcome(url: url, success: false, message: error.localizedDescription)
         }
+    }
+
+    /// Refuses to delete filesystem roots and the home directory itself —
+    /// a guard against pathological configured paths, not user error (the UI
+    /// always confirms first).
+    public static func refusalReason(for url: URL) -> String? {
+        let path = url.standardizedFileURL.path
+        if path == "/" {
+            return "Refusing to delete the filesystem root."
+        }
+        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        if path == home {
+            return "Refusing to delete the home directory itself."
+        }
+        return nil
     }
 
     public static func revealInFinder(_ urls: [URL]) {

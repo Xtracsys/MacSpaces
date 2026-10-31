@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// Polls mounted volumes for capacity at a fixed interval.
 @MainActor

@@ -2,7 +2,7 @@ import Foundation
 
 /// Audits the local Ollama installation: parses model manifests, detects
 /// orphaned blobs, reports the on-disk footprint of `~/.ollama`.
-struct OllamaAuditor {
+public struct OllamaAuditor {
     struct ManifestBlob: Decodable {
         let mediaType: String?
         let digest: String?
@@ -16,11 +16,17 @@ struct OllamaAuditor {
         let layers: [ManifestBlob]?
     }
 
-    let homeDirectory: URL
+    public let homeDirectory: URL
     /// Ollama's model store root (`~/.ollama/models` by default).
-    var modelsRoot: URL { homeDirectory.appendingPathComponent("models") }
+    public var modelsRoot: URL { homeDirectory.appendingPathComponent("models") }
 
-    init(homeDirectory: URL? = nil) {
+    /// Ollama 0.34+ is migrating to `manifests-v2/`; both trees are scanned and
+    /// duplicates (same registry/ns/name/tag) resolved in favor of v2.
+    public var manifestRoots: [URL] {
+        ["manifests", "manifests-v2"].map { modelsRoot.appendingPathComponent($0) }
+    }
+
+    public init(homeDirectory: URL? = nil) {
         if let homeDirectory {
             self.homeDirectory = homeDirectory
         } else {
@@ -31,7 +37,7 @@ struct OllamaAuditor {
 
     // MARK: - Public API
 
-    func audit() -> OllamaAudit {
+    public func audit() -> OllamaAudit {
         var audit = OllamaAudit()
         audit.ollamaHome = homeDirectory
         audit.ollamaRunning = Self.isOllamaRunning(home: homeDirectory)
@@ -48,20 +54,29 @@ struct OllamaAuditor {
         var blobByDigest: [String: BlobInfo] = [:]
         for blob in blobs { blobByDigest[blob.digest] = blob }
 
-        // digest → number of manifests referencing it
-        var referenceCounts: [String: Int] = [:]
-
         for manifestURL in manifests {
-            guard let info = parseManifest(at: manifestURL, blobLookup: blobByDigest) else { continue }
-            audit.models.append(info)
-            for digest in referencedDigests(of: manifestURL) {
+            if let info = parseManifest(at: manifestURL, blobLookup: blobByDigest) {
+                audit.models.append(info)
+            }
+        }
+
+        // Migration duplicates (same model+tag in manifests/ and manifests-v2/):
+        // dedupe FIRST, then count references — otherwise both copies of a
+        // model inflate reference counts and shared-layer attribution.
+        audit.models = Self.dedupeMigrationDuplicates(audit.models)
+
+        // digest → number of distinct (deduped) manifests referencing it
+        var referenceCounts: [String: Int] = [:]
+        for model in audit.models {
+            for digest in Set(model.layerDigests) {
                 referenceCounts[digest, default: 0] += 1
             }
         }
 
         audit.models.sort { $0.totalSize > $1.totalSize }
 
-        // Attribute shared layers now that every manifest has been parsed.
+        // Attribute shared layers now that references are counted over the
+        // deduped model list.
         var modelsWithSharing: [OllamaModelInfo] = []
         for model in audit.models {
             let digestSet = Set(model.layerDigests)
@@ -71,10 +86,11 @@ struct OllamaAuditor {
             for digest in uniqueDigests { uniqueSize += blobByDigest[digest]?.size ?? 0 }
             modelsWithSharing.append(OllamaModelInfo(
                 registry: model.registry, namespace: model.namespace, name: model.name,
-                tag: model.tag, manifestURL: model.manifestURL, totalSize: model.totalSize,
-                uniqueSize: uniqueSize, layerCount: model.layerCount,
-                sharedLayerCount: shared.count, missingBlobDigests: model.missingBlobDigests,
-                layerDigests: model.layerDigests
+                tag: model.tag, manifestURL: model.manifestURL,
+                modificationDate: model.modificationDate,
+                totalSize: model.totalSize, uniqueSize: uniqueSize,
+                layerCount: model.layerCount, sharedLayerCount: shared.count,
+                missingBlobDigests: model.missingBlobDigests, layerDigests: model.layerDigests
             ))
         }
         audit.models = modelsWithSharing
@@ -91,31 +107,45 @@ struct OllamaAuditor {
 
     // MARK: - Manifest discovery & parsing
 
-    func manifestFiles() -> [URL] {
-        let manifestsRoot = modelsRoot.appendingPathComponent("manifests")
-        guard let enumerator = FileManager.default.enumerator(
-            at: manifestsRoot, includingPropertiesForKeys: [.isDirectoryKey], options: []
-        ) else { return [] }
-
+    public func manifestFiles() -> [URL] {
         var files: [URL] = []
-        for case let url as URL in enumerator {
-            let name = url.lastPathComponent
-            if name == ".DS_Store" { continue }
-            let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
-            if !isDir { files.append(url) }
+        for root in manifestRoots {
+            guard let enumerator = FileManager.default.enumerator(
+                at: root, includingPropertiesForKeys: [.isDirectoryKey], options: []
+            ) else { continue }
+
+            for case let url as URL in enumerator {
+                let name = url.lastPathComponent
+                if name == ".DS_Store" { continue }
+                let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+                if !isDir { files.append(url) }
+            }
         }
         return files.sorted { $0.path < $1.path }
     }
 
-    /// Digests (config + layers) referenced by the manifest at the given URL.
-    func referencedDigests(of manifestURL: URL) -> [String] {
-        Self.referencedDigests(of: manifestURL)
+    /// Keeps one entry per model+tag; when the same model exists in both
+    /// manifests/ and manifests-v2/, the v2 manifest wins.
+    static func dedupeMigrationDuplicates(_ models: [OllamaModelInfo]) -> [OllamaModelInfo] {
+        var best: [String: OllamaModelInfo] = [:]
+        for model in models {
+            let key = model.qualifiedName
+            if let existing = best[key] {
+                let existingIsV2 = existing.manifestURL.path.contains("manifests-v2")
+                let candidateIsV2 = model.manifestURL.path.contains("manifests-v2")
+                if candidateIsV2 && !existingIsV2 { best[key] = model }
+            } else {
+                best[key] = model
+            }
+        }
+        return Array(best.values)
     }
 
     private func parseManifest(at url: URL, blobLookup: [String: BlobInfo]) -> OllamaModelInfo? {
-        // Path layout: models/manifests/<registry>/<namespace…>/<name>/<tag>
+        // Path layout: models/manifests[/‑v2]/<registry>/<namespace…>/<name>/<tag>
         let components = url.pathComponents
-        guard let manifestsIndex = components.lastIndex(of: "manifests") else { return nil }
+        let manifestsIndex = components.lastIndex { $0 == "manifests" || $0.hasPrefix("manifests-") }
+        guard let manifestsIndex else { return nil }
         let rest = Array(components[(manifestsIndex + 1)...])
         guard rest.count >= 2 else { return nil }
         let tag = rest.last!
@@ -143,12 +173,15 @@ struct OllamaAuditor {
             }
         }
 
+        let modDate = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+
         return OllamaModelInfo(
             registry: registry,
             namespace: namespace,
             name: name,
             tag: tag,
             manifestURL: url,
+            modificationDate: modDate,
             totalSize: totalSize,
             uniqueSize: 0, // filled in by the audit post-pass
             layerCount: digests.count,
@@ -158,9 +191,36 @@ struct OllamaAuditor {
         )
     }
 
+    // MARK: - Version grouping (feature: model version manager)
+
+    /// Groups manifests by base name (everything before the tag), variants
+    /// sorted newest-first by manifest modification date.
+    public static func modelGroups(from models: [OllamaModelInfo]) -> [OllamaModelGroup] {
+        var byBase: [String: [OllamaModelInfo]] = [:]
+        for model in models { byBase[model.baseName, default: []].append(model) }
+        return byBase
+            .map { base, variants in
+                OllamaModelGroup(
+                    baseName: base,
+                    variants: variants.sorted {
+                        ($0.modificationDate ?? .distantPast) > ($1.modificationDate ?? .distantPast)
+                    }
+                )
+            }
+            .sorted { $0.totalSize > $1.totalSize }
+    }
+
+    /// Heuristic: does this tag look like a quantization level (Q4_K_M, IQ3_XS, Q8_0, F16…)?
+    public static func looksLikeQuantTag(_ tag: String) -> Bool {
+        let regex = try? NSRegularExpression(pattern: "^(iq\\d+|q\\d+|f16|f32|bf16)", options: [.caseInsensitive])
+        guard let regex else { return false }
+        let range = NSRange(tag.startIndex..., in: tag)
+        return regex.firstMatch(in: tag, options: [], range: range) != nil
+    }
+
     // MARK: - Blobs
 
-    func blobFiles() -> [BlobInfo] {
+    public func blobFiles() -> [BlobInfo] {
         let blobsRoot = modelsRoot.appendingPathComponent("blobs")
         guard let entries = try? FileManager.default.contentsOfDirectory(
             at: blobsRoot, includingPropertiesForKeys: [.totalFileAllocatedSizeKey, .fileSizeKey], options: []
@@ -180,7 +240,7 @@ struct OllamaAuditor {
     // MARK: - Footprint
 
     /// Sizes of every top-level directory under `~/.ollama`.
-    func footprint() -> [FootprintItem] {
+    public func footprint() -> [FootprintItem] {
         guard let entries = try? FileManager.default.contentsOfDirectory(
             at: homeDirectory, includingPropertiesForKeys: [.isDirectoryKey], options: []
         ) else { return [] }
@@ -197,7 +257,9 @@ struct OllamaAuditor {
     // MARK: - Process detection
 
     /// True if an Ollama server process appears to be running for this install.
-    static func isOllamaRunning(home: URL) -> Bool {
+    /// kill(pid, 0) only probes existence — no signal is sent; EPERM (another
+    /// user's process) correctly reports as not running.
+    public static func isOllamaRunning(home: URL) -> Bool {
         let pidFile = home.appendingPathComponent("ollama.pid")
         guard let contents = try? String(contentsOf: pidFile, encoding: .utf8),
               let pid = Int32(contents.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -208,7 +270,7 @@ struct OllamaAuditor {
     // MARK: - Deletion helpers
 
     /// Blobs referenced *only* by the given manifest (safe to delete with it).
-    static func blobsUniqueTo(model: OllamaModelInfo, allModels: [OllamaModelInfo], blobs: [BlobInfo]) -> [BlobInfo] {
+    public static func blobsUniqueTo(model: OllamaModelInfo, allModels: [OllamaModelInfo], blobs: [BlobInfo]) -> [BlobInfo] {
         let referencedElsewhere = Set(
             allModels.filter { $0.id != model.id }.flatMap { referencedDigests(of: $0.manifestURL) }
         )
@@ -217,7 +279,7 @@ struct OllamaAuditor {
         return blobs.filter { deletable.contains($0.digest) }
     }
 
-    static func referencedDigests(of manifestURL: URL) -> [String] {
+    public static func referencedDigests(of manifestURL: URL) -> [String] {
         guard let data = try? Data(contentsOf: manifestURL),
               let document = try? JSONDecoder().decode(ManifestDocument.self, from: data)
         else { return [] }

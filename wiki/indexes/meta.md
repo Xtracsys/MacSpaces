@@ -1,7 +1,8 @@
 # Meta
 *repo plumbing*
 
-- **[Package.swift](../docs/package-swift.html)** — `Package.swift` (27 lines): Three targets, one dependency direction: MacSpacesCore (library) ← MacSpaces (app executable) and ← macspaces-tests (test executable). Platforms: macOS 13. Tools: 5.9. Zero externa
-- **[scripts/build-app.sh](../docs/build-app-sh.html)** — `scripts/build-app.sh` (85 lines): Turns the SwiftPM build into a double-clickable .app: release build → Contents/{MacOS,Resources} assembly → Info.plist → generated icon → ad-hoc signature. Encodes every toolchain 
-- **[scripts/make-icon.swift](../docs/make-icon-swift.html)** — `scripts/make-icon.swift` (115 lines): Generates AppIcon.icns at build time with zero assets in the repo: a Swift script draws the icon with CoreGraphics — blue→teal gradient rounded square, white usage ring at 72%, a s
-- **[README.md](../docs/readme-md.html)** — `README.md` (78 lines): The repository front door: what the app does, the safety model, build/run instructions, permissions guidance, and the Ollama custom-path caveat. Points at this wiki and USER_GUIDE.
+- **Package.swift** — `Package.swift` (34 lines): Three targets, one dependency direction: MacSpacesCore (library) ← MacSpaces (app) and ← macspaces-tests. Platforms: macOS 13. Tools: 5.9. Zero external dependencies.
+- **build-app.sh** — `scripts/build-app.sh` (82 lines): Turns the SwiftPM build into a double-clickable .app. Encodes every toolchain workaround discovered during bring-up so a fresh clone builds with one command.
+- **make-icon.swift** — `scripts/make-icon.swift` (114 lines): Generates AppIcon.icns at build time with zero repo assets: CoreGraphics draws the gradient rounded square, a white usage ring at 72%, and a bar-chart glyph row; the full iconset P
+- **README.md** — `README.md` (95 lines): The repository front door: feature pillars (including all ten v1.1 additions), the safety model, build instructions with the CLT caveat, permissions guidance, the Ollama 0.34 dual-
+- **notarize.sh** — `scripts/notarize.sh` (64 lines): The distribution gate: Developer ID signing, notarization via notarytool, and ticket stapling. Ad-hoc-signed builds trigger Gatekeeper on other Macs ('damaged' on recent macOS); a 

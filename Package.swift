@@ -5,7 +5,7 @@ let package = Package(
     name: "MacSpaces",
     platforms: [.macOS(.v13)],
     targets: [
-        // Scanners, models, and services — no SwiftUI, linkable by tests.
+        // Scanners, models, services — no SwiftUI, linkable by tests.
         .target(
             name: "MacSpacesCore",
             path: "Sources/MacSpacesCore"

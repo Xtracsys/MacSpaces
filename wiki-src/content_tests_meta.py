@@ -1,104 +1,114 @@
 ARTICLES = [
     dict(
         slug="runner-swift", title="Tests/MacSpacesTestRunner/Runner.swift", category="tests",
-        path="Tests/MacSpacesTestRunner/Runner.swift", lines=292, lang="Swift", status="TEST", pkg="macspaces-tests",
-        phase="v1.0", spec_refs=[], tested_by="", related=["ollamaauditor-swift", "llamaauditor-swift", "models-swift"],
+        path="Tests/MacSpacesTestRunner/Runner.swift", lines=515, lang="Swift", status="TEST", pkg="macspaces-tests",
+        phase="v1.1", spec_refs=[], tested_by="", related=["ollamaauditor-swift", "ggufmeta-swift", "diskscanner-swift", "ignorerules-swift"],
         lead=[
-            "41 assertions across four suites, run by a hand-rolled harness that exits non-zero on failure. The harness exists because this machine's Command Line Tools ship neither the macOS XCTest framework (swift test fails with 'unable to resolve module dependency: XCTest') nor the Swift Testing macro plugin — the same toolchain gap that forced the 26.5 SDK fallback for SwiftUI macros.",
+            "100 assertions across seven suites, run by a hand-rolled harness that exits non-zero on failure. The harness exists because this machine's Command Line Tools ship neither the macOS XCTest framework nor the Swift Testing macro plugin — the same toolchain gap that forces the 26.5 SDK fallback for the SwiftUI app target.",
         ],
         sections=[
-            ("Harness", [
-                "TestRecorder collects per-assertion failures with file/line and counts passes; expectEqual is a thin Equatable wrapper that prints both values in the failure line. @main TestMain runs the suites, prints 'Passed assertions: N' and 'ALL TESTS PASSED' or the numbered failure list, and exits 1 on any failure. Run with: swift run --scratch-path .build/tests macspaces-tests (the separate scratch path lets tests build under the default SDK while the SwiftUI app builds under 26.5).",
-                "The test target depends only on MacSpacesCore and uses @testable import MacSpacesCore — legal because SwiftPM passes -enable-testing in debug builds. A plain import compiles but makes every internal Core type invisible, which produced a very confusing 'cannot find DiskNode' phase during bring-up.",
+            ("Harness and coverage", [
+                "TestRecorder collects failures with file:line; expectEqual prints both values. @main TestMain runs the suites (the deep-tree scan is async/awaited) and prints ALL TESTS PASSED or a numbered failure list. Run: swift run --scratch-path .build/tests macspaces-tests — the separate scratch path builds tests under the default 27.0 SDK while the SwiftUI app uses 26.5. The runner uses @testable import MacSpacesCore: a plain import compiles but leaves every internal type invisible ('cannot find DiskNode').",
+                "Suites: OllamaAuditTests (orphan detection with shared layers, missing blobs, unique-blob deletion math, pid probing, version grouping newest-first, quant-tag heuristics), LlamaAuditTests (dedupe, custom folders, GGUF byte-level header fixture, Homebrew version resolution), IgnoreRulesTests (bare names, descendants, segment-crossing stars, escaping), DiskTreeTests (removing() totals, largestFiles, skip rules + the async deadlock regression), ReportTests (ScheduledAudit.run against the real machine + JSON encoding), and SecurityTests (root/home deletion guards, planted-symlink write refusal, pathological-glob compile + timing, pattern caps, migration-dedupe reference honesty).",
             ]),
-            ("OllamaAuditTests — the orphan engine", [
-                "Fixtures build a temp ~/.ollama with makeBlob (sizes in multiples of 4096 so APFS allocated size equals written size — the first run's 1000-byte blobs reported 4096 and broke every size assertion) and makeManifest writing real manifest JSON with config/layers digests.",
-                "orphanDetectionAndSharedLayers is the core case: two manifests sharing one layer, one orphan blob. Asserts the orphan set and byte total, shared detection, model A's total (4096 + 4096 + 8192 = 16384), its unique size (12288), shared count (1), and model B's unique size of 0. This is the test that caught the sharedBlobDigests-before-population ordering bug. missingBlobsReported covers phantom digests; blobsUniqueToModel proves a shared layer is excluded from model deletion; processDetection writes our own pid to ollama.pid (must report running) and 'not-a-pid' (must not). Each test gets a fresh temp root — an early version shared one root and accumulated manifests across tests.",
-                "Path comparisons resolve symlinks on both sides: FileManager.temporaryDirectory hands out /var/folders/... while enumerators return the resolved /private/var/folders/..., so raw URL equality silently failed. resolvingSymlinks via URL handles this.",
-            ]),
-            ("LlamaAuditTests and DiskTreeTests", [
-                "LlamaAuditTests: prettyModelName (models--org--name → org/name), tilde expansion, duplicate detection (two identical payloads + one different file → exactly one group of two excluding the different file), and a custom-folder end-to-end audit. DiskTreeTests: removing() splices a file out of a two-level tree and shrinks both ancestor totals (asserts 100 remaining after removing a 500-byte file from a 600-byte tree — an early draft of the fixture put the file at the wrong path and the test accidentally passed with the broken implementation), largestFiles ordering, and all five shouldSkip rules including the root-prefix-only-at-'/' case.",
+            ("Fixtures that earned their keep", [
+                "The deep/wide tree scan at concurrency 2 hangs forever under the pre-fix scanner — it is the deadlock regression test. The same fixture exposed directory double-counting (19 vs 13). The GGUF fixture builds a valid v3 header byte-by-byte (and a bogus file for the nil path). Ollama fixtures use 4096-multiple blob sizes so APFS allocated size equals written size, resolve symlinks on both sides of path comparisons (/var vs /private/var), and give each test a fresh temp root.",
             ]),
         ],
         key_items=[
-            ("TestRecorder / expectEqual", "Macro-free assertions with file:line failure reporting"),
-            ("withTempRoot(_ body:)", "Fresh fixture root per test, cleaned up in defer"),
-            ("swift run --scratch-path .build/tests macspaces-tests", "How to run the suite"),
+            ("swift run --scratch-path .build/tests macspaces-tests", "How to run the 86-assertion suite"),
+            ("DiskTreeTests.runDeepTreeScan", "Deadlock + double-count regression (hangs pre-fix)"),
+            ("withTempRoot(_ body:)", "Fresh fixture root per test"),
         ],
     ),
     dict(
         slug="package-swift", title="Package.swift", category="meta",
-        path="Package.swift", lines=27, lang="SwiftPM", status="META", pkg="",
-        phase="v1.0", spec_refs=[], tested_by="", related=["runner-swift", "overview-architecture"],
+        path="Package.swift", lines=34, lang="SwiftPM", status="META", pkg="",
+        phase="v1.1", spec_refs=[], tested_by="", related=["runner-swift", "overview-architecture"],
         lead=[
-            "Three targets, one dependency direction: MacSpacesCore (library) ← MacSpaces (app executable) and ← macspaces-tests (test executable). Platforms: macOS 13. Tools: 5.9. Zero external dependencies — everything is Foundation, AppKit, SwiftUI, and Charts.",
+            "Three targets, one dependency direction: MacSpacesCore (library) ← MacSpaces (app) and ← macspaces-tests. Platforms: macOS 13. Tools: 5.9. Zero external dependencies.",
         ],
         sections=[
             ("Why the tests are an executableTarget", [
-                "The obvious .testTarget failed twice on this toolchain: CLT lacks the macOS XCTest framework entirely, and the Swift Testing macro plugin is also missing. A plain executable target linking MacSpacesCore sidesteps both. The comment in the manifest documents the run command — swift run --scratch-path .build/tests macspaces-tests — including why the separate scratch path exists (tests build under the default 27.0 SDK, which is only toxic to SwiftUI macro expansion).",
+                "A .testTarget fails twice on this toolchain: CLT lacks the macOS XCTest framework and the Swift Testing macro plugin. A plain executable linking MacSpacesCore sidesteps both; the manifest comment documents the run command and the separate scratch path.",
             ]),
         ],
         key_items=[
-            ("MacSpacesCore", "Library target: models, scanners, services — no SwiftUI"),
-            ("MacSpaces", "GUI executable: @main + views; depends on Core"),
-            ("macspaces-tests", "Macro-free harness executable; depends on Core"),
+            ("MacSpacesCore", "Library: models, 5 scanners, 7 services"),
+            ("macspaces-tests", "Macro-free harness executable"),
         ],
     ),
     dict(
         slug="build-app-sh", title="scripts/build-app.sh", category="meta",
-        path="scripts/build-app.sh", lines=85, lang="bash", status="META", pkg="",
-        phase="v1.0", spec_refs=["README.md"], tested_by="", related=["make-icon-swift", "overview-user-guide"],
+        path="scripts/build-app.sh", lines=82, lang="bash", status="META", pkg="",
+        phase="v1.1", spec_refs=["README.md"], tested_by="", related=["make-icon-swift", "overview-user-guide"],
         lead=[
-            "Turns the SwiftPM build into a double-clickable .app: release build → Contents/{MacOS,Resources} assembly → Info.plist → generated icon → ad-hoc signature. Encodes every toolchain workaround discovered during bring-up so a fresh clone builds with one command.",
+            "Turns the SwiftPM build into a double-clickable .app. Encodes every toolchain workaround discovered during bring-up so a fresh clone builds with one command.",
         ],
         sections=[
-            ("SDK fallback", [
-                "If libSwiftUIMacros.dylib is absent from the CLT plugin directory (a defect in the 27.0 Command Line Tools: the SDK's SwiftUI uses macros but the plugin ships missing) and the 26.5 SDK exists, the script exports SDKROOT to the 26.5 SDK before building. On a machine with full Xcode installed the check passes and the default SDK is used unchanged.",
-                "The build step is swift build -c release --product MacSpaces — --product matters: a bare swift build also builds macspaces-tests, which needs -enable-testing and therefore fails in release. The binary path comes from --show-bin-path rather than guesswork.",
+            ("Distribution modes", [
+                "--universal cross-compiles a fat binary (swift build --arch arm64 --arch x86_64, verified with lipo -archs) and records per-arch minimum versions in Info.plist. --dmg stages the .app plus an /Applications symlink into a scratch dir and produces a compressed UDZO image via hdiutil. --install copies to /Applications. A macOS bash 3.2 trap bit the first run: under set -u, expanding an empty array with the ARCH_ARGS[@] syntax is an unbound-variable error — the conditional-expansion guard (append plus-sign inside the braces) fixes it.",
+                "scripts/notarize.sh automates the distribution path: Developer ID codesign with hardened runtime and timestamp, notarytool submit --wait from a keychain profile, stapler staple, and spctl verification. Without MACSPACES_SIGN_IDENTITY and MACSPACES_KEYCHAIN_PROFILE it prints the complete credential setup instead of failing.",
             ]),
-            ("Bundle assembly", [
-                "Writes Info.plist with CFBundleIdentifier com.macspaces.app, LSMinimumSystemVersion 13.0, public.app-category.utilities, NSHighResolutionCapable, and a CFBundleIconFile reference. Copies the executable, generates Resources/AppIcon.icns via the make-icon.swift script (failure is non-fatal and the icon plist key is deleted so no dangling reference remains), then clears extended attributes with xattr -cr before codesign --force --deep --sign - — the xattr step is load-bearing: Finder metadata detritus makes ad-hoc signing fail with 'resource fork, Finder information, or similar detritus not allowed'.",
-                "--install copies the finished bundle to /Applications, replacing any previous copy. The script prints the launch command (open build/MacSpaces.app) on success.",
+            ("Pipeline", [
+                "SDK fallback: if libSwiftUIMacros.dylib is missing from the CLT plugin dir (a defect in the 27.0 Command Line Tools) and the 26.5 SDK exists, SDKROOT is pinned to 26.5. The build is swift build -c release --product MacSpaces — --product matters because a bare build also compiles the test runner, which needs -enable-testing and fails in release.",
+                "Bundle assembly writes Info.plist (com.macspaces.app, min macOS 13, version 1.1), copies the binary, generates AppIcon.icns via make-icon.swift (failure deletes the plist icon key), clears extended attributes with xattr -cr (load-bearing: Finder detritus breaks ad-hoc signing), then codesigns ad-hoc. --install copies to /Applications.",
             ]),
         ],
         key_items=[
-            ("./scripts/build-app.sh [--install]", "Build the bundle; optionally install to /Applications"),
-            ("SDKROOT fallback", "Auto-detects the missing SwiftUIMacros plugin, pins 26.5 SDK"),
+            ("./scripts/build-app.sh [--install]", "Build (and optionally install) the bundle"),
             ("xattr -cr before codesign", "Prevents Finder-detritus signature failures"),
         ],
     ),
     dict(
         slug="make-icon-swift", title="scripts/make-icon.swift", category="meta",
-        path="scripts/make-icon.swift", lines=115, lang="Swift (script)", status="META", pkg="",
-        phase="v1.0", spec_refs=[], tested_by="", related=["build-app-sh"],
+        path="scripts/make-icon.swift", lines=114, lang="Swift (script)", status="META", pkg="",
+        phase="v1.1", spec_refs=[], tested_by="", related=["build-app-sh"],
         lead=[
-            "Generates AppIcon.icns at build time with zero assets in the repo: a Swift script draws the icon with CoreGraphics — blue→teal gradient rounded square, white usage ring at 72%, a small bar-chart glyph row — writes the full .iconset PNG matrix, and shells out to iconutil.",
+            "Generates AppIcon.icns at build time with zero repo assets: CoreGraphics draws the gradient rounded square, a white usage ring at 72%, and a bar-chart glyph row; the full iconset PNG matrix is written and compiled by iconutil.",
         ],
         sections=[
             ("Details", [
-                "drawIcon(size:) renders into a CGContext per size (16 through 1024); the ring is two arcs over a 25%-alpha track with round caps, and the bar chart sits in the lower center. The size→filename switch covers the complete standard iconset naming (icon_16x16.png through icon_512x512@2x.png). PNG encoding goes through NSBitmapImageRep. iconutil -c icns compiles the iconset; failure exits non-zero so build-app.sh falls back to an icon-less bundle rather than shipping a broken resource.",
+                "drawIcon(size:) renders resolution-independently for 16–1024 px mapped onto the complete standard iconset naming. iconutil failure exits non-zero so build-app.sh falls back to an icon-less bundle rather than shipping a broken resource.",
             ]),
         ],
         key_items=[
-            ("drawIcon(size:) -> CGImage?", "Gradient tile + usage ring + bars, resolution independent"),
-            ("iconset matrix + iconutil", "16–1024 px mapped to all required filenames"),
+            ("drawIcon(size:) -> CGImage?", "Gradient tile + usage ring + bars"),
         ],
     ),
     dict(
         slug="readme-md", title="README.md", category="meta",
-        path="README.md", lines=78, lang="Markdown", status="META", pkg="",
-        phase="v1.0", spec_refs=[], tested_by="", related=["overview-user-guide", "overview-architecture"],
+        path="README.md", lines=95, lang="Markdown", status="META", pkg="",
+        phase="v1.1", spec_refs=[], tested_by="", related=["overview-user-guide", "overview-architecture"],
         lead=[
-            "The repository front door: what the app does, the safety model, build/run instructions, permissions guidance, and the Ollama custom-path caveat. Points at this wiki and USER_GUIDE.md for the full walkthrough.",
+            "The repository front door: feature pillars (including all ten v1.1 additions), the safety model, build instructions with the CLT caveat, permissions guidance, the Ollama 0.34 dual-manifest note, and pointers to USER_GUIDE.md and the wiki.",
         ],
         sections=[
             ("Coverage", [
-                "Summarizes the three feature pillars (Ollama orphan audits, llama.cpp/GGUF management with dedupe, parallel disk scanning), the Trash-by-default safety model with the shared-layer guarantee, the CLT-only build path (scripts/build-app.sh, swift run for tests), Full Disk Access guidance for full scans, and the OLLAMA_MODELS limitation: the app reads ~/.ollama only, because a Finder-launched app does not inherit your shell's environment.",
+                "Documents the CLI companion (--audit-json / --scheduled-audit), the deadlock-free scanner, ignore rules, the six model-store sources, and the manifests/ + manifests-v2/ migration handling, plus the full project layout including every v1.1 file.",
             ]),
         ],
         key_items=[
-            ("swift build / swift run --scratch-path .build/tests macspaces-tests", "Build and test entry points"),
+            ("swift run --scratch-path .build/tests macspaces-tests", "Test entry point"),
             ("./scripts/build-app.sh --install", "One-command bundle + install"),
+        ],
+    ),
+    dict(
+        slug="notarize-sh", title="scripts/notarize.sh", category="meta",
+        path="scripts/notarize.sh", lines=64, lang="bash", status="META", pkg="",
+        phase="v1.1", spec_refs=["CONTRIBUTING.md"], tested_by="", related=["build-app-sh", "overview-architecture"],
+        lead=[
+            "The distribution gate: Developer ID signing, notarization via notarytool, and ticket stapling. Ad-hoc-signed builds trigger Gatekeeper on other Macs ('damaged' on recent macOS); a notarized build installs cleanly everywhere.",
+        ],
+        sections=[
+            ("Flow and credential setup", [
+                "sign (xattr clear → codesign --force --deep --sign <Developer ID> --options runtime --timestamp) → verify → ditto zip → notarytool submit --wait (keychain profile) → stapler staple → final codesign + spctl check. Credentials come from two env vars (MACSPACES_SIGN_IDENTITY, MACSPACES_KEYCHAIN_PROFILE); absent either, the script prints the full one-time setup (security find-identity, notarytool store-credentials) and exits 0 rather than half-signing.",
+                "Requires an Apple Developer Program membership and an App Store Connect API key; the app bundle itself is produced by scripts/build-app.sh --universal --dmg.",
+            ]),
+        ],
+        key_items=[
+            ("./scripts/notarize.sh [path/to/app]", "Sign + notarize + staple; prints setup without credentials"),
+            ("MACSPACES_SIGN_IDENTITY / MACSPACES_KEYCHAIN_PROFILE", "The two required environment variables"),
         ],
     ),
 ]

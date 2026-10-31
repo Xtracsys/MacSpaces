@@ -1,11 +1,12 @@
-import MacSpacesCore
 import SwiftUI
+import MacSpacesCore
 
 enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
     case dashboard
     case disk
     case ollama
     case llama
+    case caches
 
     var id: String { rawValue }
 
@@ -15,6 +16,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         case .disk: return "Disk Usage"
         case .ollama: return "Ollama"
         case .llama: return "llama.cpp"
+        case .caches: return "Caches & Snapshots"
         }
     }
 
@@ -24,6 +26,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         case .disk: return "internaldrive"
         case .ollama: return "pawprint"
         case .llama: return "cpu"
+        case .caches: return "archivebox"
         }
     }
 }
@@ -38,7 +41,7 @@ struct ContentView: View {
                 Section("Monitor") {
                     ForEach(SidebarItem.allCases) { item in
                         Label(item.title, systemImage: item.systemImage)
-                            .badge(badgeCount(for: item))
+                            .badge(badgeCount(for: item).map { Text("\($0)") })
                             .tag(item)
                     }
                 }
@@ -51,6 +54,7 @@ struct ContentView: View {
             case .disk: DiskTreeView()
             case .ollama: OllamaView()
             case .llama: LlamaView()
+            case .caches: CachesView()
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -65,15 +69,21 @@ struct ContentView: View {
         }
     }
 
-    /// Little badges on the sidebar entries (orphan count, duplicate groups, etc.).
-    private func badgeCount(for item: SidebarItem) -> Int {
+    /// Sidebar badges (orphan count, duplicate groups, reclaimable caches).
+    /// Returns nil for zero so no "0" badge renders.
+    private func badgeCount(for item: SidebarItem) -> Int? {
         switch item {
         case .ollama:
-            return model.ollamaAudit?.orphanedBlobs.count ?? 0
+            let count = model.ollamaAudit?.orphanedBlobs.count ?? 0
+            return count > 0 ? count : nil
         case .llama:
-            return model.llamaAudit?.duplicateGroups.count ?? 0
+            let count = model.llamaAudit?.duplicateGroups.count ?? 0
+            return count > 0 ? count : nil
+        case .caches:
+            guard let audit = model.cachesAudit, audit.totalBytes > 0 else { return nil }
+            return nil // caches show their size in the tab itself, not a badge
         default:
-            return 0
+            return nil
         }
     }
 }

@@ -1,5 +1,5 @@
-import MacSpacesCore
 import SwiftUI
+import MacSpacesCore
 
 struct LlamaView: View {
     @EnvironmentObject private var model: AppModel
@@ -39,7 +39,8 @@ struct LlamaView: View {
         ) {
             Button("Delete (\(Format.bytes(dirPendingDelete?.totalBytes ?? 0)))", role: .destructive) {
                 if let dir = dirPendingDelete {
-                    model.deleteFiles(at: [dir.url], refresh: [.llama])
+                    // Force Trash: the dialog advertises Trash semantics.
+                    model.deleteFiles(at: [dir.url], mode: .trash, refresh: [.llama])
                 }
                 dirPendingDelete = nil
             }
@@ -59,7 +60,7 @@ struct LlamaView: View {
         ) {
             Button("Move Duplicates to Trash", role: .destructive) {
                 if let files = duplicatesPendingDelete {
-                    model.deleteFiles(at: files.map { URL(fileURLWithPath: $0.path) }, refresh: [.llama])
+                    model.deleteFiles(at: files.map { URL(fileURLWithPath: $0.path) }, mode: .trash, refresh: [.llama])
                 }
                 duplicatesPendingDelete = nil
             }
@@ -264,7 +265,7 @@ struct LlamaView: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(
                 title: "Models by Location",
-                subtitle: "llama.cpp cache, HuggingFace hub, and your custom GGUF folders"
+                subtitle: "llama.cpp cache, HuggingFace hub, LM Studio, Jan, GPT4All, and custom folders"
             )
             if audit.modelDirs.isEmpty {
                 Label("No model directories found.", systemImage: "tray")
@@ -325,6 +326,19 @@ struct LlamaView: View {
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                                     .padding(.leading, 26)
+                                if let meta = file.meta {
+                                    if let quant = meta.quantization {
+                                        StatusBadge(text: quant, color: .teal)
+                                    }
+                                    if let arch = meta.architecture {
+                                        StatusBadge(text: arch, color: .blue)
+                                    }
+                                    if let ctx = meta.contextLength, ctx > 0 {
+                                        Text("ctx \(ctx)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
                                 Spacer()
                                 Text(Format.bytes(file.size))
                                     .font(.caption)

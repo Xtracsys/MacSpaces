@@ -1,6 +1,14 @@
 #!/bin/bash
-# Builds MacSpaces.app from the SwiftPM package.
-# Usage: ./scripts/build-app.sh [--install]
+# Builds MacSpaces.app (and optionally a DMG) from the SwiftPM package.
+#
+# Usage:
+#   ./scripts/build-app.sh                 # native-arch .app → build/
+#   ./scripts/build-app.sh --universal     # arm64 + x86_64 fat binary
+#   ./scripts/build-app.sh --dmg           # also produce a drag-to-Applications DMG
+#   ./scripts/build-app.sh --install       # also copy to /Applications
+#   ./scripts/build-app.sh --universal --dmg --install
+#
+# Distribution (other Macs) needs a notarized build — see scripts/notarize.sh.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -10,6 +18,19 @@ APP_NAME="MacSpaces"
 BUILD_DIR="$ROOT/build"
 APP_DIR="$BUILD_DIR/$APP_NAME.app"
 CONTENTS="$APP_DIR/Contents"
+DMG_PATH="$BUILD_DIR/$APP_NAME.dmg"
+
+UNIVERSAL=0
+MAKE_DMG=0
+INSTALL=0
+for arg in "$@"; do
+    case "$arg" in
+        --universal) UNIVERSAL=1 ;;
+        --dmg) MAKE_DMG=1 ;;
+        --install) INSTALL=1 ;;
+        *) echo "Unknown option: $arg" >&2; exit 1 ;;
+    esac
+done
 
 # This CLT ships the 27.0 SDK whose SwiftUI needs the SwiftUIMacros plugin
 # that CLT forgot to install; fall back to the last macro-free SDK.
@@ -18,12 +39,22 @@ if [[ -z "${SDKROOT:-}" ]] && [[ ! -f "/Library/Developer/CommandLineTools/usr/l
     echo "==> Using SDKROOT=$SDKROOT (SwiftUIMacros plugin missing in CLT)"
 fi
 
-echo "==> swift build -c $CONFIG"
-swift build -c "$CONFIG" --product MacSpaces
+echo "==> swift build -c $CONFIG (universal=$UNIVERSAL)"
+ARCH_ARGS=()
+if [[ "$UNIVERSAL" == 1 ]]; then
+    ARCH_ARGS=(--arch arm64 --arch x86_64)
+fi
+# The ${ARR[@]+"${ARR[@]}"} guard: bash 3.2 (macOS default) treats empty
+# arrays as unbound under set -u.
+swift build -c "$CONFIG" --product MacSpaces ${ARCH_ARGS[@]+"${ARCH_ARGS[@]}"}
 BIN="$(swift build -c "$CONFIG" --product MacSpaces --show-bin-path)"
-if [[ "$(uname -m)" == "arm64" ]] && [[ ! -e "$BIN/$APP_NAME" ]]; then
+if [[ ! -e "$BIN/$APP_NAME" ]]; then
     echo "Binary missing at $BIN/$APP_NAME" >&2
     exit 1
+fi
+
+if [[ "$UNIVERSAL" == 1 ]]; then
+    echo "==> Architectures: $(lipo -archs "$BIN/$APP_NAME")"
 fi
 
 echo "==> Assembling $APP_NAME.app"
@@ -43,10 +74,15 @@ cat > "$CONTENTS/Info.plist" <<PLIST
     <key>CFBundleName</key><string>$APP_NAME</string>
     <key>CFBundleDisplayName</key><string>$APP_NAME</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>1.1</string>
+    <key>CFBundleVersion</key><string>2</string>
     <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
+    <key>LSMinimumSystemVersionByArchitecture</key>
+    <dict>
+        <key>arm64</key><string>13.0</string>
+        <key>x86_64</key><string>13.0</string>
+    </dict>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict>
@@ -62,7 +98,6 @@ if [[ ! -f "$CONTENTS/Resources/AppIcon.icns" ]]; then
         echo "Icon generated."
     else
         echo "Icon generation skipped (non-fatal)."
-        rm -f "$CONTENTS/Info.plist.bak"
         # Remove icon reference if no icon was produced
         /usr/libexec/PlistBuddy -c "Delete :CFBundleIconFile" "$CONTENTS/Info.plist" 2>/dev/null || true
     fi
@@ -72,7 +107,19 @@ echo "==> Ad-hoc codesigning"
 xattr -cr "$APP_DIR" 2>/dev/null || true
 codesign --force --deep --sign - "$APP_DIR" 2>/dev/null || echo "codesign failed (non-fatal)"
 
-if [[ "${1:-}" == "--install" ]]; then
+if [[ "$MAKE_DMG" == 1 ]]; then
+    echo "==> Building $DMG_PATH"
+    STAGING="$BUILD_DIR/dmg-staging"
+    rm -rf "$STAGING" "$DMG_PATH"
+    mkdir -p "$STAGING"
+    cp -R "$APP_DIR" "$STAGING/"
+    ln -s /Applications "$STAGING/Applications"
+    hdiutil create -volname "$APP_NAME" -srcfolder "$STAGING" -ov -format UDZO "$DMG_PATH" >/dev/null
+    rm -rf "$STAGING"
+    echo "DMG: $DMG_PATH ($(du -h "$DMG_PATH" | cut -f1))"
+fi
+
+if [[ "$INSTALL" == 1 ]]; then
     echo "==> Installing to /Applications"
     rm -rf "/Applications/$APP_NAME.app"
     cp -R "$APP_DIR" /Applications/
@@ -81,3 +128,5 @@ fi
 
 echo "Done: $APP_DIR"
 echo "Launch with: open \"$APP_DIR\""
+[[ "$MAKE_DMG" == 1 ]] && echo "Distribute with: scripts/notarize.sh (needs a Developer ID certificate)"
+exit 0

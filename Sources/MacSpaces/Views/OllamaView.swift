@@ -1,5 +1,5 @@
-import MacSpacesCore
 import SwiftUI
+import MacSpacesCore
 
 struct OllamaView: View {
     @EnvironmentObject private var model: AppModel
@@ -17,6 +17,9 @@ struct OllamaView: View {
                     }
                     orphanSection(audit)
                     modelsSection(audit)
+                    if !audit.versionGroups.isEmpty {
+                        versionGroupsSection(audit)
+                    }
                     footprintSection(audit)
                 } else {
                     placeholder
@@ -31,20 +34,23 @@ struct OllamaView: View {
             }
         }
         .confirmationDialog(
-            "Clean \(model.ollamaAudit?.orphanedBlobs.count ?? 0) orphaned blobs?",
+            "Clean \(selectedOrphanCount > 0 ? "\(selectedOrphanCount) selected" : "all \(model.ollamaAudit?.orphanedBlobs.count ?? 0)") orphaned blobs?",
             isPresented: $confirmCleanOrphans,
             titleVisibility: .visible
         ) {
-            Button("Move \(selectedOrphanCount > 0 ? "\(selectedOrphanCount) Selected" : "All") Orphans to Trash", role: .destructive) {
-                if selectedOrphanCount > 0 {
-                    deleteSelectedOrphans()
+            Button("Move to Trash", role: .destructive) {
+                let urls: [URL]?
+                if selectedOrphanCount > 0, let audit = model.ollamaAudit {
+                    urls = audit.orphanedBlobs.filter { selectedOrphanIDs.contains($0.id) }.map { $0.url }
                 } else {
-                    model.deleteOrphanedBlobs()
+                    urls = nil // all orphans
                 }
+                model.cleanOrphanedBlobs(urls: urls)
+                selectedOrphanIDs.removeAll()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Orphaned blobs are not referenced by any model manifest and are safe to remove. They will be moved to the Trash.")
+            Text("Orphaned blobs are not referenced by any model manifest and are safe to remove. Each blob is re-verified against a fresh audit at deletion time, so blobs claimed by a new pull in the meantime are skipped. They will be moved to the Trash.")
         }
         .confirmationDialog(
             modelPendingDelete.map { "Delete model “\($0.qualifiedName)”?" } ?? "",
@@ -130,7 +136,7 @@ struct OllamaView: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(
                 title: "Orphaned Blobs",
-                subtitle: "Files in blobs/ that no manifest references"
+                subtitle: "Files in blobs/ that no manifest references — re-verified at deletion time"
             ) {
                 AnyView(
                     HStack(spacing: 8) {
@@ -198,21 +204,13 @@ struct OllamaView: View {
         }
     }
 
-    private func deleteSelectedOrphans() {
-        guard let audit = model.ollamaAudit else { return }
-        let chosen = audit.orphanedBlobs.filter { selectedOrphanIDs.contains($0.id) }
-        guard !chosen.isEmpty else { return }
-        model.deleteFiles(at: chosen.map { $0.url }, mode: .trash)
-        selectedOrphanIDs.removeAll()
-    }
-
     // MARK: - Models
 
     private func modelsSection(_ audit: OllamaAudit) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(
                 title: "Models",
-                subtitle: "\(audit.models.count) manifests · shared layers counted once per model for reference only"
+                subtitle: "\(audit.models.count) manifests"
             ) {
                 AnyView(
                     Button {
@@ -238,6 +236,9 @@ struct OllamaView: View {
                             .font(.callout.weight(.medium))
                             .textSelection(.enabled)
                         HStack(spacing: 8) {
+                            if OllamaAuditor.looksLikeQuantTag(modelInfo.tag) {
+                                StatusBadge(text: "quant", color: .purple)
+                            }
                             if modelInfo.sharedLayerCount > 0 {
                                 StatusBadge(text: "\(modelInfo.sharedLayerCount) shared", color: .blue)
                             }
@@ -274,6 +275,61 @@ struct OllamaView: View {
                     }
                     .buttonStyle(.borderless)
                     .help("Delete model")
+                }
+                .padding(12)
+                .background(.background, in: RoundedRectangle(cornerRadius: 10))
+            }
+        }
+    }
+
+    // MARK: - Version groups (feature: model version manager)
+
+    private func versionGroupsSection(_ audit: OllamaAudit) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(
+                title: "Version Groups",
+                subtitle: "Base models pulled with multiple tags — consider retiring old quants"
+            )
+
+            ForEach(audit.versionGroups) { group in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "square.stack.3d.up")
+                            .foregroundStyle(.purple)
+                        Text(group.baseName)
+                            .font(.callout.weight(.semibold))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer()
+                        Text(Format.bytes(group.totalSize))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(Array(group.variants.enumerated()), id: \.element.id) { index, variant in
+                        HStack(spacing: 8) {
+                            Image(systemName: index == 0 ? "star.fill" : "circle")
+                                .font(.caption)
+                                .foregroundStyle(index == 0 ? .yellow : .secondary)
+                                .help(index == 0 ? "Newest manifest" : "Older variant")
+                            Text(variant.tag)
+                                .font(.system(.callout, design: .monospaced))
+                            if OllamaAuditor.looksLikeQuantTag(variant.tag) {
+                                StatusBadge(text: "quant", color: .purple)
+                            }
+                            Spacer()
+                            Text(Format.bytes(variant.totalSize))
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                            Button(role: .destructive) {
+                                modelPendingDelete = variant
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Delete this variant")
+                        }
+                        .padding(.leading, 24)
+                    }
                 }
                 .padding(12)
                 .background(.background, in: RoundedRectangle(cornerRadius: 10))

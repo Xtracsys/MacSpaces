@@ -124,6 +124,8 @@ public struct OllamaModelInfo: Identifiable, Hashable {
     public let name: String
     public let tag: String
     public let manifestURL: URL
+    /// Manifest file modification date — used by the version manager to rank variants.
+    public let modificationDate: Date?
     /// Sum of every blob the manifest references (shared layers counted in full).
     public let totalSize: Int64
     /// Sum of blobs referenced only by this manifest.
@@ -139,9 +141,15 @@ public struct OllamaModelInfo: Identifiable, Hashable {
         let prefix = namespace.isEmpty ? "" : "\(namespace)/"
         return "\(registry)/\(prefix)\(name):\(tag)"
     }
+    /// Grouping key for the version manager: everything before the tag.
+    public var baseName: String {
+        let prefix = namespace.isEmpty ? "" : "\(namespace)/"
+        return "\(registry)/\(prefix)\(name)"
+    }
 
     public init(
         registry: String, namespace: String, name: String, tag: String, manifestURL: URL,
+        modificationDate: Date? = nil,
         totalSize: Int64, uniqueSize: Int64, layerCount: Int, sharedLayerCount: Int,
         missingBlobDigests: [String], layerDigests: [String]
     ) {
@@ -150,6 +158,7 @@ public struct OllamaModelInfo: Identifiable, Hashable {
         self.name = name
         self.tag = tag
         self.manifestURL = manifestURL
+        self.modificationDate = modificationDate
         self.totalSize = totalSize
         self.uniqueSize = uniqueSize
         self.layerCount = layerCount
@@ -157,6 +166,16 @@ public struct OllamaModelInfo: Identifiable, Hashable {
         self.missingBlobDigests = missingBlobDigests
         self.layerDigests = layerDigests
     }
+}
+
+/// A base model with two or more tags pulled (e.g. Q4_K_M and Q8_0 of the same weights).
+public struct OllamaModelGroup: Identifiable, Hashable {
+    public let baseName: String
+    /// Variants sorted newest-first by manifest modification date.
+    public let variants: [OllamaModelInfo]
+
+    public var id: String { baseName }
+    public var totalSize: Int64 { variants.reduce(0) { $0 + $1.totalSize } }
 }
 
 public struct FootprintItem: Identifiable, Hashable {
@@ -188,6 +207,10 @@ public struct OllamaAudit {
 
     public var orphanedBytes: Int64 { orphanedBlobs.reduce(0) { $0 + $1.size } }
     public var modelsBytes: Int64 { models.reduce(0) { $0 + $1.totalSize } }
+    /// Base models pulled with more than one tag — version-manager candidates.
+    public var versionGroups: [OllamaModelGroup] {
+        OllamaAuditor.modelGroups(from: models).filter { $0.variants.count > 1 }
+    }
 }
 
 // MARK: - llama.cpp
@@ -226,7 +249,21 @@ public struct LlamaInstall: Identifiable, Hashable {
 public enum ModelSource: String, Hashable, CaseIterable {
     case llamaCache = "llama.cpp cache"
     case huggingFace = "HuggingFace cache"
+    case lmStudio = "LM Studio"
+    case jan = "Jan"
+    case gpt4all = "GPT4All"
     case customFolder = "Custom folder"
+}
+
+/// Metadata parsed from a GGUF file header (no tensor data is read).
+public struct GGUFMetaInfo: Hashable {
+    public var version: UInt32
+    public var tensorCount: UInt64
+    public var architecture: String?
+    public var modelName: String?
+    public var quantization: String?
+    public var contextLength: UInt64?
+    public var parameterCountLabel: String?
 }
 
 public struct GGUFFile: Identifiable, Hashable {
@@ -234,14 +271,17 @@ public struct GGUFFile: Identifiable, Hashable {
     public let size: Int64
     /// Cheap content fingerprint (size + head/tail bytes) used to spot duplicates.
     public let fingerprint: String
+    /// Parsed GGUF header metadata, when the file is a valid GGUF.
+    public let meta: GGUFMetaInfo?
 
     public var id: String { path }
     public var name: String { URL(fileURLWithPath: path).lastPathComponent }
 
-    public init(path: String, size: Int64, fingerprint: String) {
+    public init(path: String, size: Int64, fingerprint: String, meta: GGUFMetaInfo? = nil) {
         self.path = path
         self.size = size
         self.fingerprint = fingerprint
+        self.meta = meta
     }
 }
 
@@ -287,6 +327,71 @@ public struct LlamaAudit {
     }
 }
 
+// MARK: - Developer caches (Xcode / SwiftPM)
+
+public enum CacheCategory: String, CaseIterable {
+    case xcodeDerivedData = "Xcode DerivedData"
+    case xcodeArchives = "Xcode Archives"
+    case deviceSupport = "Device Support"
+    case simulatorCaches = "Simulator Caches"
+    case swiftPM = "SwiftPM Caches"
+}
+
+public struct CacheItem: Identifiable, Hashable {
+    public let name: String
+    public let path: String
+    public let category: CacheCategory
+    public let size: Int64
+
+    public var id: String { path }
+    public var url: URL { URL(fileURLWithPath: path) }
+
+    public init(name: String, path: String, category: CacheCategory, size: Int64) {
+        self.name = name
+        self.path = path
+        self.category = category
+        self.size = size
+    }
+}
+
+public struct CachesAudit {
+    public var items: [CacheItem] = []
+    public var warnings: [String] = []
+
+    public init() {}
+
+    public var totalBytes: Int64 { items.reduce(0) { $0 + $1.size } }
+    public var reclaimableBytes: Int64 { totalBytes }
+}
+
+// MARK: - Time Machine local snapshots
+
+public struct SnapshotInfo: Identifiable, Hashable {
+    public let name: String
+    public let date: Date?
+
+    public var id: String { name }
+
+    public init(name: String, date: Date?) {
+        self.name = name
+        self.date = date
+    }
+}
+
+// MARK: - Folder watcher
+
+public struct WatchAlert: Identifiable, Hashable {
+    public let folder: String
+    public let bytes: Int64
+    public let thresholdBytes: Int64
+    public let date: Date
+
+    public var id: String { folder }
+    public var humanFolder: String {
+        folder.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
+    }
+}
+
 // MARK: - Scan progress
 
 public struct ScanProgress: Equatable {
@@ -322,6 +427,47 @@ public struct DeleteOutcome: Identifiable {
     }
 }
 
+// MARK: - Machine-readable audit report
+
+public struct AuditReport: Codable {
+    public struct VolumeReport: Codable {
+        public let name: String
+        public let freeBytes: Int64
+        public let totalBytes: Int64
+    }
+    public struct OllamaReport: Codable {
+        public struct ModelEntry: Codable {
+            public let name: String
+            public let totalBytes: Int64
+            public let uniqueBytes: Int64
+        }
+        public let installed: Bool
+        public let running: Bool
+        public let modelCount: Int
+        public let modelBytes: Int64
+        public let orphanCount: Int
+        public let orphanBytes: Int64
+        public let models: [ModelEntry]
+    }
+    public struct LlamaReport: Codable {
+        public let installCount: Int
+        public let modelLocationCount: Int
+        public let ggufBytes: Int64
+        public let duplicateGroupCount: Int
+        public let duplicateReclaimableBytes: Int64
+    }
+    public struct CachesReport: Codable {
+        public let itemCount: Int
+        public let totalBytes: Int64
+    }
+
+    public let generatedAt: Date
+    public let volumes: [VolumeReport]
+    public let ollama: OllamaReport
+    public let llama: LlamaReport
+    public let caches: CachesReport
+}
+
 // MARK: - Formatting helpers
 
 public enum Format {
@@ -343,5 +489,11 @@ public enum Format {
     /// "sha256-abc123…" → "sha256:abc123…"
     public static func digest(forBlobFileName name: String) -> String {
         name.replacingOccurrences(of: "-", with: ":")
+    }
+
+    /// Shortens the home-directory prefix to "~" for display.
+    public static func tildify(_ path: String) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 /// A counting semaphore usable from async contexts; `signal()` is synchronous
-/// so it can be used from `defer`.
+/// so it can be used outside a holding scope.
 final class AsyncSemaphore: @unchecked Sendable {
     private let lock = NSLock()
     private var available: Int
@@ -24,16 +24,13 @@ final class AsyncSemaphore: @unchecked Sendable {
         }
     }
 
+    /// Release the permit WITHOUT awaiting — safe from synchronous code.
     func signal() {
         lock.lock()
-        if !waiters.isEmpty {
-            let continuation = waiters.removeFirst()
-            lock.unlock()
-            continuation.resume()
-        } else {
-            available += 1
-            lock.unlock()
-        }
+        let continuation = waiters.isEmpty ? nil : waiters.removeFirst()
+        if continuation == nil { available += 1 }
+        lock.unlock()
+        continuation?.resume()
     }
 }
 
@@ -79,7 +76,7 @@ struct DiskScanner {
     init(root: URL, concurrency: Int = DiskScanner.defaultConcurrency, stats: ScanStats? = nil) {
         self.root = root
         self.stats = stats
-        self.semaphore = AsyncSemaphore(concurrency)
+        self.semaphore = AsyncSemaphore(max(1, concurrency))
     }
 
     func scan() async -> DiskNode {
@@ -101,28 +98,42 @@ struct DiskScanner {
     }
 
     private func scanDirectory(_ dir: URL) async -> DiskNode? {
-        // Hold a permit only while enumerating this directory. Holding it while
-        // awaiting child scans can deadlock: every permit may be owned by a
-        // parent waiting for children that are queued behind the semaphore.
+        if Task.isCancelled { return nil }
+
         await semaphore.wait()
 
-        if Task.isCancelled {
-            semaphore.signal()
-            return nil
-        }
-
+        // --- Enumeration happens while holding the permit -------------------
         var ownBytes: Int64 = 0
         var itemCount = 1
         var subdirectories: [URL] = []
 
-        let entries: [URL]
         do {
-            entries = try FileManager.default.contentsOfDirectory(
+            let entries = try FileManager.default.contentsOfDirectory(
                 at: dir, includingPropertiesForKeys: Array(Self.resourceKeys), options: []
             )
+            for entry in entries {
+                if Task.isCancelled { break }
+                let path = entry.path
+                if Self.shouldSkip(path: path, scanRoot: root.path) { continue }
+                if IgnoreRules.shared.excludes(path: path) { continue }
+
+                let values = try? entry.resourceValues(forKeys: Self.resourceKeys)
+                if values?.isSymbolicLink == true { continue }
+
+                if values?.isDirectory == true {
+                    subdirectories.append(entry)
+                    // No +1 here: the child node's own itemCount already
+                    // includes itself — counting both double-counts dirs.
+                } else {
+                    let size = Int64(values?.totalFileAllocatedSize ?? values?.fileSize ?? 0)
+                    ownBytes += size
+                    itemCount += 1
+                    await stats?.record(items: 1, bytes: size, path: path)
+                }
+            }
         } catch {
-            await stats?.record(items: 0, bytes: 0, path: dir.path)
             semaphore.signal()
+            await stats?.record(items: 0, bytes: 0, path: dir.path)
             return DiskNode(
                 path: dir.path, name: dir.lastPathComponent, isDirectory: true,
                 ownBytes: 0, totalBytes: 0, itemCount: 1, children: [],
@@ -130,26 +141,10 @@ struct DiskScanner {
             )
         }
 
-        for entry in entries {
-            if Task.isCancelled { break }
-            let path = entry.path
-            if Self.shouldSkip(path: path, scanRoot: root.path) { continue }
-
-            let values = try? entry.resourceValues(forKeys: Self.resourceKeys)
-            if values?.isSymbolicLink == true { continue }
-
-            if values?.isDirectory == true {
-                subdirectories.append(entry)
-                itemCount += 1
-            } else {
-                let size = Int64(values?.totalFileAllocatedSize ?? values?.fileSize ?? 0)
-                ownBytes += size
-                itemCount += 1
-                await stats?.record(items: 1, bytes: size, path: path)
-            }
-        }
-
-        // Release before recursively awaiting children; see the deadlock note above.
+        // --- Release the permit BEFORE waiting on children ------------------
+        // Holding a permit across the child TaskGroup deadlocks the bounded
+        // pool on deep trees: N blocked parents can hold all N permits while
+        // their children wait for one forever.
         semaphore.signal()
 
         var children: [DiskNode] = []
@@ -174,7 +169,7 @@ struct DiskScanner {
         let childBytes = children.reduce(Int64(0)) { $0 + $1.totalBytes }
         return DiskNode(
             path: dir.path,
-            name: dir == root ? root.lastPathComponent : dir.lastPathComponent,
+            name: dir.lastPathComponent,
             isDirectory: true,
             ownBytes: ownBytes,
             totalBytes: ownBytes + childBytes,
@@ -194,6 +189,8 @@ struct DiskScanner {
 
         var total: Int64 = 0
         for case let fileURL as URL in enumerator {
+            let path = fileURL.path
+            if IgnoreRules.shared.excludes(path: path) { continue }
             let values = try? fileURL.resourceValues(forKeys: [.totalFileAllocatedSizeKey, .fileSizeKey, .isDirectoryKey, .isSymbolicLinkKey])
             if values?.isDirectory == true || values?.isSymbolicLink == true { continue }
             total += Int64(values?.totalFileAllocatedSize ?? values?.fileSize ?? 0)

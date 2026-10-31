@@ -52,8 +52,7 @@ func drawIcon(size: CGFloat) -> CGImage? {
     ctx.strokePath()
 
     // Bar chart glyphs at the bottom
-    let barColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.9)
-    ctx.setFillColor(barColor)
+    ctx.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.9))
     let barWidth = side * 0.055
     let gap = side * 0.04
     let baseY = rect.minY + side * 0.16
@@ -67,11 +66,10 @@ func drawIcon(size: CGFloat) -> CGImage? {
     return ctx.makeImage()
 }
 
-var sizes: [Int] = [16, 32, 64, 128, 256, 512, 1024]
 let iconsetDir = (outputDir as NSString).appendingPathComponent("AppIcon.iconset")
 try? FileManager.default.createDirectory(atPath: iconsetDir, withIntermediateDirectories: true)
 
-for size in sizes {
+for size in [16, 32, 64, 128, 256, 512, 1024] {
     guard let image = drawIcon(size: CGFloat(size)) else {
         fputs("Failed to draw icon at \(size)\n", stderr)
         exit(1)

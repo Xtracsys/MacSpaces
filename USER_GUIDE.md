@@ -1,8 +1,8 @@
-# MacSpaces — User Guide
+# MacSpaces — User Guide (v1.1)
 
 A native macOS app that monitors disk usage and reclaims space, with dedicated
-audits for **Ollama** model stores and **llama.cpp** installs/models. Everything
-it deletes goes to the Trash by default.
+audits for **Ollama**, **llama.cpp** and other local AI runtimes. Everything it
+deletes goes to the Trash by default.
 
 ---
 
@@ -17,83 +17,82 @@ open build/MacSpaces.app
 | Requirement | Detail |
 |---|---|
 | macOS | 13 (Ventura) or newer |
-| Architecture | Apple Silicon (build Intel/universal with `swift build -c release --arch arm64 --arch x86_64`) |
+| Architecture | Apple Silicon (universal: `swift build -c release --arch arm64 --arch x86_64`) |
 | Dependencies | None — single self-contained bundle |
 
-**First launch on a non-build machine:** Gatekeeper may warn because the app is
-ad-hoc signed. Fix once with:
+**First launch on a non-build machine:** Gatekeeper may warn (ad-hoc signature).
+Fix once with `xattr -cr /Applications/MacSpaces.app` or use
+System Settings → Privacy & Security → *Open Anyway*.
+
+**CLI companion:** the app binary doubles as a headless auditor:
 
 ```sh
-xattr -cr /Applications/MacSpaces.app
+/Applications/MacSpaces.app/Contents/MacOS/MacSpaces --audit-json | jq .
 ```
-
-or use System Settings → Privacy & Security → *Open Anyway*.
 
 ---
 
-## 2. The four tabs
+## 2. The five tabs
 
 ### Dashboard
 
-The startup volume's usage ring (percent used, used/free/total), refreshed
-every 30 seconds. Two audit summary cards — **Ollama** and **llama.cpp** —
-show reclaimable space once audited, with buttons to run the audit and jump to
-the tab. After your first disk scan, a chart of the eight largest folders
-appears with a jump link into Disk Usage.
+Startup volume usage ring (refreshed every 30 s), audit summary cards for
+**Ollama**, **llama.cpp**, and **Caches** — each with a one-click audit that
+jumps to its tab — plus **Watched Folder Alerts** when a monitored folder grows
+past its threshold, and a chart of the eight largest folders after your first
+scan.
 
-The **menu bar** shows a live readout (e.g. `34% free · 1.2 TB`) with quick
-access to every mounted volume, Settings, and Quit.
+The **menu bar** shows live free space; its menu has volume details and a
+**Quick clean** section: trash orphaned Ollama blobs or duplicate GGUFs
+directly, once audits have run.
 
 ### Ollama
 
-Press *Audit Ollama* (or just open the tab — the first audit runs
-automatically).
+- **Orphaned Blobs** — files in `blobs/` that no manifest references. Cleanup
+  is **always Trash-only** and **re-verified at deletion time**: each blob is
+  checked against a fresh audit, and blobs claimed by a new pull since the
+  on-screen audit are skipped. Tick individual blobs or clean all.
+- **Models** — every manifest with total size, *unique* size (what actually
+  disappears if you delete it), shared-layer and missing-blob badges, and a
+  `quant` badge for quantization tags.
+- **Version Groups** — base models pulled with multiple tags (e.g. Q4_K_M and
+  Q8_0 of the same weights), newest first, with per-variant delete. Retire old
+  quants you no longer run.
+- **~/.ollama Footprint** — sizes of every top-level directory.
 
-**What you'll see:**
-
-- **Header cards** — model count and total size, orphaned-blob count and
-  reclaimable bytes, the `~/.ollama` home size, and a **Running/Stopped** badge
-  for the Ollama server.
-- **Orphaned Blobs** — files in `~/.ollama/models/blobs/` that **no manifest
-  references**. These are pure waste (interrupted pulls, half-deleted models)
-  and safe to remove. Tick individual blobs or clean them all; cleanup is
-  **always Trash-only**.
-- **Models** — every manifest (`registry/ns/name:tag`) with:
-  - *total size* — all blobs it references,
-  - *unique size* — blobs no other model uses (what actually disappears if you
-    delete it),
-  - *shared* badge — layers reused across models,
-  - a red *missing blobs* badge if a manifest references files that don't exist
-    (integrity problem).
-  Delete a model to trash its manifest + unique blobs; **shared layers are
-  never removed**.
-- **~/.ollama Footprint** — sizes of `logs/`, `backup/`, `cache/`, keys, etc.
-
-> If the server shows **Running**, restart Ollama after cleanup so it picks up
-> the changes.
+Both the classic `manifests/` tree and the new Ollama 0.34+ `manifests-v2/`
+layout are read; the running-server badge reminds you to restart Ollama after
+cleanup.
 
 ### llama.cpp
 
-- **Installations** — Homebrew packages (`llama-cli`… resolved to the Cellar,
-  with version) and source checkouts found in your scan roots, including the
-  size of `build/` artifacts and a `git describe` version.
-- **Duplicate GGUFs** — models identical by content fingerprint (size + hash of
-  first/last 256 KB). One click trashes all but one copy of each group.
-- **Models by Location** — grouped by source:
-  - *llama.cpp cache* — `~/.cache/llama.cpp` (models fetched via
-    `llama-server -hf`)
-  - *HuggingFace cache* — `~/.cache/huggingface/hub`
-  - *Custom folder* — folders you add (default: `~/.ollama/models/ggufs`)
+- **Installations** — Homebrew (with the real Cellar version) and source
+  checkouts including `build/` artifact sizes and `git describe` versions.
+- **Duplicate GGUFs** — identical files by content fingerprint (size + hash of
+  first/last 256 KB); one click trashes all but one copy of each group.
+- **Models by Location** — grouped by source: llama.cpp cache
+  (`~/.cache/llama.cpp`), HuggingFace hub cache, **LM Studio**
+  (`~/.lmstudio/models`), **Jan**, **GPT4All**, and your custom folders.
+  Each GGUF row shows parsed header metadata: **architecture, quantization,
+  context length**.
+
+### Caches & Snapshots
+
+- **Developer Caches** — Xcode DerivedData (per project), Archives, iOS Device
+  Support, Simulator caches, SwiftPM caches. All rebuild automatically;
+  cleanup goes to the Trash.
+- **Local Time Machine Snapshots** — APFS snapshots on the startup disk, with
+  a *Thin Snapshots* action that asks macOS to free up to 20 GB by deleting
+  the oldest ones (purgeable space; backups on the TM drive are untouched).
 
 ### Disk Usage
 
 - **Scan Home Folder** (fast) or **Scan Entire Disk** (minutes; confirmed
-  first). Live progress shows items, bytes, and the current path — Cancel
-  stops cleanly.
-- **Folder Tree** — sorted by size, click to drill down, right-click any item
-  for *Reveal in Finder* or *Move to Trash*. Deleting updates the tree
-  instantly (ancestor sizes shrink) without a rescan.
+  first). Live progress shows items, bytes, and the current path.
+- **Folder Tree** — sorted by size, click to drill down, right-click for
+  *Reveal in Finder* / *Move to Trash*. Deleting updates the tree instantly.
 - **Largest Files** — the 150 biggest files with proportional bars.
+- **Ignore Rules** from Settings are honored during scans.
 
 ---
 
@@ -101,59 +100,58 @@ automatically).
 
 | Action | Goes to | Notes |
 |---|---|---|
-| Any file/folder (Disk tab, context menu) | Trash (default) | Confirmation dialog shows name + size |
-| Orphaned Ollama blobs | **Always Trash** | Even if permanent mode is on |
-| A single Ollama model | Trash (default) | Manifest + unique blobs only; shared layers kept |
+| Any file/folder (Disk tab) | Trash (default) | Confirmation shows name + size |
+| Orphaned Ollama blobs | **Always Trash, re-verified** | Skips blobs newly referenced by pulls |
+| A single Ollama model | Trash | Manifest + unique blobs only; shared layers kept |
 | Duplicate GGUFs | Trash (default) | Keeps the first copy of each group |
+| Developer caches | Always Trash | Rebuilt automatically by Xcode/SwiftPM |
+| Local TM snapshots | n/a (system purge) | `tmutil thinlocalsnapshots` |
 
-Change the default in **Settings** (Cmd-, or menu bar → Settings…):
-*Move to Trash (recommended)* vs *Delete Permanently*. Permanent mode always
-asks twice — the dialog offers a "Move to Trash Instead" escape hatch.
-
-A feedback line at the bottom of the window reports every batch
-(`Moved to Trash 3 items.` / failures with the reason).
+Change the default in **Settings** (Cmd-,): *Move to Trash (recommended)* vs
+*Delete Permanently* — permanent mode always offers a "Move to Trash Instead"
+escape hatch in the dialog.
 
 ---
 
 ## 4. Settings
 
 - **Delete behavior** — trash vs permanent default.
-- **Custom GGUF Folders** — folders scanned recursively for `*.gguf`; add via
-  the native folder picker, stored `~/`-relative.
-- **Source Scan Roots** — folders searched (3 levels deep) for llama.cpp
-  checkouts. Defaults: `~/llama.cpp`, `~/src`, `~/code`, `~/Projects`, `~/dev`,
-  `~/Developer`.
-
-Changes take effect on the **next audit** — no restart needed.
+- **Custom GGUF Folders** — recursive `*.gguf` scan targets (folder picker,
+  stored `~/`-relative). An explicitly emptied list stays empty.
+- **Source Scan Roots** — where to look for llama.cpp checkouts.
+- **Ignore Rules** — glob patterns, one per line: `node_modules/`, `*.tmp`,
+  `build`, `**` semantics documented inline. Applies to disk scans and GGUF
+  collection.
+- **Folder Watcher** — pick folders to monitor and a GB threshold; violations
+  appear as Dashboard alerts (checked every 5 minutes).
+- **Scheduled Audit** — toggle a launchd agent that runs the headless audit
+  every Friday at 10:00 and posts a reclaimable-space notification.
+- **Report Export** — save the full JSON audit report anywhere; or use
+  `--audit-json` on the command line.
 
 ---
 
 ## 5. Troubleshooting
 
-**Sizes look incomplete / lock icons appear.**
-The scan hit permission-denied folders. Grant Full Disk Access: System
-Settings → Privacy & Security → Full Disk Access → add MacSpaces (or Terminal,
-if running via `swift run`), then rescan.
+**Sizes look incomplete / lock icons.** Grant Full Disk Access to MacSpaces
+(or Terminal when running via `swift run`), then rescan.
 
-**My Ollama models aren't showing.**
-The auditor reads `~/.ollama/models` only. A Finder-launched app doesn't
-inherit your shell's environment, so a custom `OLLAMA_MODELS` path isn't
-visible — keep the default location or symlink it.
+**My Ollama models aren't showing.** The auditor reads `~/.ollama/models`
+only; a custom `OLLAMA_MODELS` path isn't visible to a Finder-launched app.
 
-**App shows "damaged" on another Mac.**
-Quarantine flag + ad-hoc signature. Run `xattr -cr` on the app (see §1), or
+**App shows "damaged" on another Mac.** Run `xattr -cr` on the app, or
 distribute notarized builds.
 
-**A scan is slow.**
-Full-disk scans traverse every reachable file. Use *Scan Home Folder* for
-day-to-day work; reserve the full scan for periodic deep audits.
+**Orphan count looks large.** Check the byte total — Ollama stores many small
+config/tokenizer blobs per pull, so hundreds of tiny orphans are normal; the
+reclaimable number is what matters.
+
+**A scan is slow.** Use *Scan Home Folder* for daily work; full-disk scans are
+periodic deep audits. Ignore rules can skip known-noisy trees.
 
 ---
 
 ## 6. Learn more
 
-- **Project wiki** — `wiki/index.html` (open in a browser): per-file
-  documentation, architecture overview, and this guide as a tabbed article.
-- **README.md** — build instructions and the safety model summary.
-- **Regenerate the wiki** after code changes:
-  `python3 ~/.agents/skills/code-wiki-generator/scripts/generate_wiki.py --source . --out wiki wiki-src`
+- **Project wiki** — `wiki/index.html`: per-file documentation and architecture.
+- **Regenerate the wiki**: `python3 ~/.agents/skills/code-wiki-generator/scripts/generate_wiki.py --source . --out wiki wiki-src`

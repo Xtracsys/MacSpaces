@@ -1,5 +1,5 @@
-import MacSpacesCore
 import SwiftUI
+import MacSpacesCore
 
 // MARK: - Volume usage ring
 

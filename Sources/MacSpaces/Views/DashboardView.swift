@@ -1,6 +1,6 @@
-import MacSpacesCore
 import Charts
 import SwiftUI
+import MacSpacesCore
 
 struct DashboardView: View {
     @EnvironmentObject private var model: AppModel
@@ -11,6 +11,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 20) {
                 volumeSection
                 auditSummarySection
+                watchAlertsSection
                 if let root = model.diskRoot {
                     topConsumersSection(root: root)
                 }
@@ -39,11 +40,10 @@ struct DashboardView: View {
                         LabeledRow(label: "Free", value: Format.bytes(volume.availableCapacity), emphasis: true)
                         LabeledRow(label: "Total", value: Format.bytes(volume.totalCapacity))
                         Button {
-                            // Always start a fresh scan for the displayed volume. Reusing an
-                            // existing tree made this button appear inert after the first scan.
                             selection = .disk
-                            guard !model.isScanning else { return }
-                            model.scanDisk(root: volume.url)
+                            if model.diskRoot == nil && !model.isScanning {
+                                model.scanDisk()
+                            }
                         } label: {
                             Label("Analyze disk usage", systemImage: "magnifyingglass")
                         }
@@ -96,6 +96,17 @@ struct DashboardView: View {
                         StatValue("Not audited", detail: "Run the llama.cpp audit")
                     }
                 }
+                auditCard(
+                    title: "Caches",
+                    systemImage: "archivebox",
+                    tint: .pink
+                ) {
+                    if let audit = model.cachesAudit {
+                        StatValue(Format.bytes(audit.totalBytes), detail: "developer caches, rebuilt on demand")
+                    } else {
+                        StatValue("Not audited", detail: "Run the caches audit")
+                    }
+                }
             }
         }
     }
@@ -113,18 +124,22 @@ struct DashboardView: View {
             }
             content()
             HStack(spacing: 8) {
-                Button(title == "Ollama" ? "Audit Ollama" : "Audit llama.cpp") {
-                    if title == "Ollama" {
+                Button("Audit \(title)") {
+                    switch title {
+                    case "Ollama":
                         model.runOllamaAudit()
                         selection = .ollama
-                    } else {
+                    case "llama.cpp":
                         model.runLlamaAudit()
                         selection = .llama
+                    default:
+                        model.runCachesAudit()
+                        selection = .caches
                     }
                 }
                 .buttonStyle(.bordered)
-                .disabled(title == "Ollama" ? model.isAuditingOllama : model.isAuditingLlama)
-                if (title == "Ollama" && model.isAuditingOllama) || (title == "llama.cpp" && model.isAuditingLlama) {
+                .disabled(isAuditing(title))
+                if isAuditing(title) {
                     ProgressView().controlSize(.small)
                 }
             }
@@ -132,6 +147,14 @@ struct DashboardView: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func isAuditing(_ title: String) -> Bool {
+        switch title {
+        case "Ollama": return model.isAuditingOllama
+        case "llama.cpp": return model.isAuditingLlama
+        default: return model.isAuditingCaches
+        }
     }
 
     private struct StatValue: View {
@@ -147,6 +170,41 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(main).font(.title2.weight(.semibold))
                 Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Watch alerts (feature: folder monitoring)
+
+    @ViewBuilder
+    private var watchAlertsSection: some View {
+        if !model.watch.alerts.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                SectionHeader(
+                    title: "Watched Folder Alerts",
+                    subtitle: "Folders that grew past their size threshold"
+                )
+                ForEach(model.watch.alerts) { alert in
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(alert.humanFolder)
+                                .font(.callout.weight(.medium))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Text("threshold \(Format.bytes(alert.thresholdBytes)) · checked \(alert.date.formatted(date: .omitted, time: .shortened))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(Format.bytes(alert.bytes))
+                            .monospacedDigit()
+                            .font(.callout.weight(.semibold))
+                    }
+                    .padding(12)
+                    .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                }
             }
         }
     }

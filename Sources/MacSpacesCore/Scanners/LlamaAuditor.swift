@@ -1,7 +1,8 @@
 import Foundation
 
 /// Audits llama.cpp installations (Homebrew, source builds) and GGUF model
-/// stores (llama.cpp download cache, HuggingFace hub cache, custom folders).
+/// stores across runtimes: llama.cpp download cache, HuggingFace hub cache,
+/// LM Studio, Jan, GPT4All, and user-configured custom folders.
 public struct LlamaAuditor {
     public let homeDirectory: URL
     /// Folders scanned recursively for loose `*.gguf` files.
@@ -30,6 +31,9 @@ public struct LlamaAuditor {
         var modelDirs: [ModelDirInfo] = []
         modelDirs.append(contentsOf: llamaCacheModels())
         modelDirs.append(contentsOf: huggingFaceModels())
+        modelDirs.append(contentsOf: lmStudioModels())
+        modelDirs.append(contentsOf: janModels())
+        modelDirs.append(contentsOf: gpt4AllModels())
         modelDirs.append(contentsOf: customFolderModels())
         audit.modelDirs = modelDirs.sorted { $0.totalBytes > $1.totalBytes }
 
@@ -44,7 +48,7 @@ public struct LlamaAuditor {
 
     // MARK: - Homebrew installs
 
-    func homebrewInstalls() -> [LlamaInstall] {
+    public func homebrewInstalls() -> [LlamaInstall] {
         var installs: [LlamaInstall] = []
         for prefix in ["/opt/homebrew", "/usr/local"] {
             let bin = URL(fileURLWithPath: "\(prefix)/bin")
@@ -57,42 +61,42 @@ public struct LlamaAuditor {
             guard !llamaBinaries.isEmpty else { continue }
 
             var executables: [String] = []
-            var installRoots = Set<URL>()
+            // Cellar package dir → resolved version dir (same install may be
+            // referenced by many bin symlinks; keep first).
+            var packageInfo: (packageDir: URL, version: String?)?
             for binary in llamaBinaries {
                 executables.append(binary.path)
-                // Resolve `llama-cli -> ../Cellar/llama.cpp/<version>/bin/llama-cli`
                 let resolved = binary.resolvingSymlinksInPath()
-                // …/Cellar/llama.cpp/<version>/bin/llama-cli → …/Cellar/llama.cpp
-                let packageDir = resolved.deletingLastPathComponent()
-                    .deletingLastPathComponent()
-                    .deletingLastPathComponent()
-                if packageDir.lastPathComponent.contains("llama.cpp") {
-                    installRoots.insert(packageDir)
+                // …/Cellar/llama.cpp/<version>/bin/llama-cli
+                let binDir = resolved.deletingLastPathComponent()
+                let versionDir = binDir.deletingLastPathComponent()
+                let packageDir = versionDir.deletingLastPathComponent()
+                guard packageDir.lastPathComponent.contains("llama.cpp"),
+                      packageDir.deletingLastPathComponent().lastPathComponent == "Cellar"
+                else { continue }
+                if packageInfo == nil {
+                    packageInfo = (packageDir, versionDir.lastPathComponent)
                 }
             }
 
-            for root in installRoots {
-                // Under Cellar the child directory is the version; under /usr/local it isn't.
-                let version = root.deletingLastPathComponent().lastPathComponent == "Cellar"
-                    ? root.lastPathComponent : nil
-                let total = DiskScanner.sequentialSize(of: root)
-                installs.append(LlamaInstall(
-                    kind: .homebrew,
-                    name: "llama.cpp (Homebrew)",
-                    path: root.path,
-                    version: version,
-                    totalBytes: total,
-                    buildBytes: 0,
-                    executables: executables
-                ))
-            }
+            guard let info = packageInfo else { continue }
+            let total = DiskScanner.sequentialSize(of: info.packageDir)
+            installs.append(LlamaInstall(
+                kind: .homebrew,
+                name: "llama.cpp (Homebrew)",
+                path: info.packageDir.path,
+                version: info.version,
+                totalBytes: total,
+                buildBytes: 0,
+                executables: executables
+            ))
         }
         return installs
     }
 
     // MARK: - Source builds
 
-    func sourceInstalls() -> [LlamaInstall] {
+    public func sourceInstalls() -> [LlamaInstall] {
         var installs: [LlamaInstall] = []
         let fm = FileManager.default
         for rawRoot in sourceScanRoots {
@@ -108,8 +112,7 @@ public struct LlamaAuditor {
 
             var visited: Set<String> = []
             for case let url as URL in enumerator {
-                let depth = (enumerator.level as Int)
-                if depth > 3 { enumerator.skipDescendants(); continue }
+                if (enumerator.level as Int) > 3 { enumerator.skipDescendants(); continue }
                 let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
                 guard values?.isDirectory == true, values?.isSymbolicLink != true else { continue }
                 guard url.lastPathComponent.contains("llama.cpp") else { continue }
@@ -122,7 +125,6 @@ public struct LlamaAuditor {
                 if fm.fileExists(atPath: buildDir.path) {
                     buildBytes = DiskScanner.sequentialSize(of: buildDir)
                 }
-                let execs = llamaExecutables(in: url)
                 installs.append(LlamaInstall(
                     kind: .source,
                     name: url.lastPathComponent,
@@ -130,7 +132,7 @@ public struct LlamaAuditor {
                     version: Self.gitDescribe(at: url),
                     totalBytes: total,
                     buildBytes: buildBytes,
-                    executables: execs
+                    executables: Self.llamaExecutables(in: url)
                 ))
                 enumerator.skipDescendants()
             }
@@ -138,7 +140,7 @@ public struct LlamaAuditor {
         return installs
     }
 
-    private func llamaExecutables(in checkout: URL) -> [String] {
+    private static func llamaExecutables(in checkout: URL) -> [String] {
         let buildBin = checkout.appendingPathComponent("build/bin")
         guard let entries = try? FileManager.default.contentsOfDirectory(
             at: buildBin, includingPropertiesForKeys: [.isDirectoryKey], options: []
@@ -151,17 +153,45 @@ public struct LlamaAuditor {
 
     // MARK: - Model caches
 
-    func llamaCacheModels() -> [ModelDirInfo] {
+    public func llamaCacheModels() -> [ModelDirInfo] {
         let cacheRoot = homeDirectory.appendingPathComponent(".cache/llama.cpp")
         return modelDirsUnder(cacheRoot, source: .llamaCache)
     }
 
-    func huggingFaceModels() -> [ModelDirInfo] {
+    public func huggingFaceModels() -> [ModelDirInfo] {
         let hubRoot = homeDirectory.appendingPathComponent(".cache/huggingface/hub")
         return modelDirsUnder(hubRoot, source: .huggingFace)
     }
 
-    func customFolderModels() -> [ModelDirInfo] {
+    /// LM Studio: ~/.lmstudio/models/<publisher>/<model>/…gguf
+    public func lmStudioModels() -> [ModelDirInfo] {
+        let root = homeDirectory.appendingPathComponent(".lmstudio/models")
+        return modelDirsUnder(root, source: .lmStudio)
+    }
+
+    /// Jan: ~/Library/Application Support/Jan/models/<model>/…gguf
+    public func janModels() -> [ModelDirInfo] {
+        let root = homeDirectory.appendingPathComponent("Library/Application Support/Jan/models")
+        return modelDirsUnder(root, source: .jan)
+    }
+
+    /// GPT4All: loose *.gguf files in ~/Library/Application Support/nomic.ai/GPT4All
+    public func gpt4AllModels() -> [ModelDirInfo] {
+        let root = homeDirectory.appendingPathComponent("Library/Application Support/nomic.ai/GPT4All")
+        guard FileManager.default.fileExists(atPath: root.path) else { return [] }
+        let ggufs = Self.ggufFiles(under: root)
+        let size = DiskScanner.sequentialSize(of: root)
+        guard size > 0 else { return [] }
+        return [ModelDirInfo(
+            source: .gpt4all,
+            name: root.lastPathComponent,
+            path: root.path,
+            totalBytes: size,
+            ggufFiles: ggufs
+        )]
+    }
+
+    public func customFolderModels() -> [ModelDirInfo] {
         var result: [ModelDirInfo] = []
         for rawFolder in customFolders {
             let folder = Self.expandingTilde(rawFolder, home: homeDirectory)
@@ -205,7 +235,7 @@ public struct LlamaAuditor {
 
     // MARK: - GGUF helpers
 
-    static func ggufFiles(under root: URL) -> [GGUFFile] {
+    public static func ggufFiles(under root: URL) -> [GGUFFile] {
         guard let enumerator = FileManager.default.enumerator(
             at: root,
             includingPropertiesForKeys: [.totalFileAllocatedSizeKey, .fileSizeKey, .isDirectoryKey],
@@ -214,16 +244,23 @@ public struct LlamaAuditor {
 
         var files: [GGUFFile] = []
         for case let url as URL in enumerator {
+            let path = url.path
+            if IgnoreRules.shared.excludes(path: path) { continue }
             guard url.pathExtension.lowercased() == "gguf" else { continue }
             let values = try? url.resourceValues(forKeys: [.totalFileAllocatedSizeKey, .fileSizeKey])
             let size = Int64(values?.totalFileAllocatedSize ?? values?.fileSize ?? 0)
-            files.append(GGUFFile(path: url.path, size: size, fingerprint: Self.fingerprint(of: url, size: size)))
+            files.append(GGUFFile(
+                path: path,
+                size: size,
+                fingerprint: Self.fingerprint(of: url, size: size),
+                meta: GGUFMeta.parse(at: url)
+            ))
         }
         return files.sorted { $0.size > $1.size }
     }
 
     /// Dedupes GGUF files by fingerprint; groups with more than one entry are duplicates.
-    static func duplicateGroups(of files: [GGUFFile]) -> [[GGUFFile]] {
+    public static func duplicateGroups(of files: [GGUFFile]) -> [[GGUFFile]] {
         var byFingerprint: [String: [GGUFFile]] = [:]
         for file in files { byFingerprint[file.fingerprint, default: []].append(file) }
         return byFingerprint.values
@@ -232,7 +269,7 @@ public struct LlamaAuditor {
     }
 
     /// Cheap identity check: size plus FNV-1a over the first and last 256 KB.
-    static func fingerprint(of url: URL, size: Int64) -> String {
+    public static func fingerprint(of url: URL, size: Int64) -> String {
         let chunk = 256 * 1024
         var hash: UInt64 = 0xcbf29ce484222325
         let prime: UInt64 = 0x100000001b3
@@ -259,7 +296,7 @@ public struct LlamaAuditor {
 
     // MARK: - Helpers
 
-    static func expandingTilde(_ path: String, home: URL) -> URL {
+    public static func expandingTilde(_ path: String, home: URL) -> URL {
         if path == "~" || path.hasPrefix("~/") {
             return home.appendingPathComponent(String(path.dropFirst(2)))
         }
@@ -267,7 +304,7 @@ public struct LlamaAuditor {
     }
 
     /// "models--Qwen--Qwen2.5-7B-GGUF" → "Qwen/Qwen2.5-7B-GGUF"
-    static func prettyModelName(_ raw: String) -> String {
+    public static func prettyModelName(_ raw: String) -> String {
         if raw.hasPrefix("models--") {
             return raw.dropFirst("models--".count)
                 .replacingOccurrences(of: "--", with: "/")
@@ -275,10 +312,12 @@ public struct LlamaAuditor {
         return raw
     }
 
-    static func gitDescribe(at checkout: URL) -> String? {
+    public static func gitDescribe(at checkout: URL) -> String? {
+        // Guard against paths that would parse as git options (hardening).
+        let path = checkout.path.hasPrefix("-") ? "./" + checkout.path : checkout.path
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = ["-C", checkout.path, "describe", "--tags", "--always", "--dirty"]
+        process.arguments = ["-C", path, "describe", "--tags", "--always", "--dirty"]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = Pipe()

@@ -1,0 +1,14 @@
+MacSpaces
+Copyright 2026 Xtracsys LLC
+
+This product includes software developed by Xtracsys LLC
+(https://github.com/Xtracsys).
+
+Licensed under the Apache License, Version 2.0. See LICENSE for the full text.
+
+Third-party content: none. MacSpaces depends only on Apple system frameworks
+(Foundation, AppKit, SwiftUI, Charts) and ships no bundled third-party code or
+assets — the app icon is generated at build time by scripts/make-icon.swift.
+
+The Apache License, Version 2.0 text is embedded in the LICENSE file and
+reproduced in the source-file header convention described in CONTRIBUTING.md.
