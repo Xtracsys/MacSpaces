@@ -469,6 +469,106 @@ enum DiskTreeTests {
     }
 }
 
+// MARK: - Space map layout tests
+
+enum SpaceMapLayoutTests {
+    static func run(_ r: TestRecorder) {
+        try? testSquarifyConservation(r)
+        try? testSquarifyAspectRatios(r)
+        try? testCulling(r)
+        try? testBudget(r)
+        try? testDegenerate(r)
+    }
+
+    /// A DiskNode fixture tree without touching disk.
+    private static func node(_ name: String, bytes: Int64, children: [DiskNode] = [], isDirectory: Bool = true) -> DiskNode {
+        let childBytes = children.reduce(Int64(0)) { $0 + $1.totalBytes }
+        let childItems = children.reduce(0) { $0 + $1.itemCount }
+        return DiskNode(
+            path: "/map/" + name, name: name, isDirectory: isDirectory,
+            ownBytes: isDirectory ? 0 : bytes,
+            totalBytes: bytes + childBytes,
+            itemCount: 1 + childItems,
+            children: children,
+            accessDenied: false
+        )
+    }
+
+    /// Areas must sum to the bounds area (squarify partitions, never overlaps).
+    private static func testSquarifyConservation(_ r: TestRecorder) throws {
+        let values: [Double] = [6, 6, 4, 3, 2, 2, 1]
+        let bounds = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let rects = SpaceMapLayout.squarify(values, in: bounds)
+        expectEqual(rects.count, values.count, r, "one rect per value")
+        let sum = rects.reduce(CGFloat(0)) { $0 + $1.width * $1.height }
+        r.check(abs(sum - 10_000) < 1.0, "area conserved: \(sum) vs 10000")
+        // All rects inside bounds.
+        r.check(rects.allSatisfy { bounds.contains($0) }, "rects stay inside bounds")
+    }
+
+    /// Squarified layout must keep aspect ratios bounded — the whole point
+    /// versus the old alternating-split algorithm that produced long strips.
+    private static func testSquarifyAspectRatios(_ r: TestRecorder) throws {
+        // 12 similar-sized children: the pathological case for alternating split.
+        let values = (0..<12).map { Double(100 - $0) }
+        let rects = SpaceMapLayout.squarify(values, in: CGRect(x: 0, y: 0, width: 400, height: 300))
+        var worst: CGFloat = 0
+        for rect in rects {
+            let aspect = max(rect.width, rect.height) / max(1, min(rect.width, rect.height))
+            worst = max(worst, aspect)
+        }
+        r.check(worst < 6.0, "worst aspect ratio bounded (got \(worst))")
+    }
+
+    /// Children whose tile would be smaller than minTile aggregate into an
+    /// "Other" tile; no rendered rect falls below the minimum on any side.
+    private static func testCulling(_ r: TestRecorder) throws {
+        // Root 400x300 = 120000 pt². minTile 10 → tiles below 100 pt² (1/1200
+        // of area) must be culled. Five 50 MB children are each below the
+        // threshold, but together (250 MB ≈ 430 pt²) they form a visible
+        // aggregate — the case "Other" exists for.
+        let small = (0..<5).map { node("small\($0)", bytes: 50_000_000, isDirectory: false) }
+        let big1 = node("big1", bytes: 40_000_000_000)
+        let big2 = node("big2", bytes: 30_000_000_000)
+        let root = node("root", bytes: 0, children: small + [big1, big2])
+
+        let tiles = SpaceMapLayout.tiles(for: root, in: CGSize(width: 400, height: 300))
+        r.check(tiles.allSatisfy { $0.rect.width >= 1 && $0.rect.height >= 1 }, "no degenerate rects")
+        // No small child may appear as its own tile.
+        r.check(!tiles.contains { $0.name.hasPrefix("small") }, "sub-minimum children culled")
+        // An aggregate tile exists carrying the remainder.
+        r.check(tiles.contains { $0.isAggregate && $0.name == "Other" }, "culled children aggregated into Other")
+        r.check(!tiles.contains { $0.isAggregate && $0.node != nil }, "aggregates carry no node (not zoomable/deletable)")
+        // Depth-0 tiles partition the area (nested tiles overlap by design).
+        let topLevel = tiles.filter { $0.depth == 0 }
+        let sum = topLevel.reduce(CGFloat(0)) { $0 + $1.rect.width * $1.rect.height }
+        r.check(abs(sum - 120_000) < 120, "depth-0 tiles partition the area: \(sum)")
+    }
+
+    /// The tile budget bounds rendering on huge trees, and deep chains stop
+    /// at maxDepth instead of recursing forever.
+    private static func testBudget(_ r: TestRecorder) throws {
+        // 40-wide fan-out, 8 levels deep — far past both limits.
+        var root = node("leaf", bytes: 1_000_000, isDirectory: false)
+        for _ in 0..<8 {
+            root = node("level", bytes: 0, children: (0..<40).map { node("d\($0)", bytes: 1_000_000 + Int64($0), isDirectory: false) } + [root])
+        }
+        let tiles = SpaceMapLayout.tiles(for: root, in: CGSize(width: 1200, height: 800))
+        r.check(tiles.count <= SpaceMapLayout.maxTiles, "tile budget respected: \(tiles.count)")
+        r.check(tiles.allSatisfy { $0.depth <= SpaceMapLayout.maxDepth }, "max depth respected")
+        r.check(!tiles.isEmpty, "budgeted tree still renders")
+    }
+
+    /// Empty roots and zero-size containers produce sane output, not crashes.
+    private static func testDegenerate(_ r: TestRecorder) throws {
+        let empty = node("empty", bytes: 0, children: [])
+        r.check(SpaceMapLayout.tiles(for: empty, in: CGSize(width: 400, height: 300)).count == 1, "empty root renders a single tile")
+        r.check(SpaceMapLayout.tiles(for: empty, in: CGSize(width: 5, height: 5)).isEmpty, "window below minimum renders nothing")
+        r.check(SpaceMapLayout.squarify([], in: CGRect(x: 0, y: 0, width: 100, height: 100)).isEmpty, "no values → no rects")
+        r.check(SpaceMapLayout.squarify([0, 0], in: CGRect(x: 0, y: 0, width: 100, height: 100)).count == 2, "zero values → zero rects, no crash")
+    }
+}
+
 // MARK: - Report tests
 
 enum ReportTests {
@@ -583,6 +683,7 @@ struct TestMain {
         do { try OllamaAuditTests.run(recorder) } catch { recorder.failures.append("OllamaAuditTests threw: \(error)") }
         do { try LlamaAuditTests.run(recorder) } catch { recorder.failures.append("LlamaAuditTests threw: \(error)") }
         IgnoreRulesTests.run(recorder)
+        SpaceMapLayoutTests.run(recorder)
         SecurityTests.run(recorder)
         do { try SecurityTests.runDedupeReferenceCounts(recorder) } catch { recorder.failures.append("SecurityTests.dedupe threw: \(error)") }
         DiskTreeTests.run(recorder)

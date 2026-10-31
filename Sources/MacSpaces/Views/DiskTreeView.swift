@@ -47,15 +47,22 @@ struct DiskTreeView: View {
             }
         }
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
+            // The mode switch is the primary control: centered in the
+            // toolbar (principal placement) with short labels so it uses the
+            // top bar without truncating.
+            ToolbarItem(placement: .principal) {
                 Picker("", selection: $displayMode) {
-                    ForEach(DisplayMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
+                    Text("Map").tag(DisplayMode.spaceMap)
+                    Text("Tree").tag(DisplayMode.directory)
+                    Text("Files").tag(DisplayMode.largest)
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 220)
+                .labelsHidden()
+                .frame(maxWidth: 320)
+                .help("Disk usage view mode")
+            }
 
+            ToolbarItemGroup(placement: .primaryAction) {
                 Menu {
                     Button("Scan Home Folder") { model.scanDisk(root: ScanTarget.home.url) }
                     Button("Scan Entire Startup Disk…") { scanTargetConfirmation = .fileSystemRoot }
@@ -149,16 +156,8 @@ struct DiskTreeView: View {
     // MARK: - Space map
 
     private func spaceMapView(root: DiskNode) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Proportional space map · \(Format.bytes(root.totalBytes))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            SpaceMap(node: root)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(.black.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-        .padding(12)
+        SpaceMapView(rootNode: root)
+            .padding(12)
     }
 
     // MARK: - Tree
@@ -286,81 +285,6 @@ struct DiskTreeView: View {
             }
         }
         .listStyle(.inset)
-    }
-}
-
-struct SpaceMap: View {
-    let node: DiskNode
-    private let maxDepth = 5
-    private let palette: [Color] = [.blue, .green, .orange]
-
-    var body: some View {
-        GeometryReader { proxy in
-            mapNode(node, in: proxy.size, depth: 0, colorIndex: 0)
-        }
-    }
-
-    private func mapNode(_ node: DiskNode, in size: CGSize, depth: Int, colorIndex: Int) -> AnyView {
-        let children = displayChildren(of: node, depth: depth)
-        guard !children.isEmpty else { return AnyView(tile(node, colorIndex: colorIndex)) }
-
-        let total = max(1, children.reduce(Int64(0)) { $0 + $1.totalBytes })
-        if size.width >= size.height {
-            return AnyView(HStack(spacing: 1) {
-                ForEach(Array(children.enumerated()), id: \.element.id) { index, child in
-                    mapNode(child, in: CGSize(width: size.width * ratio(child, total), height: size.height), depth: depth + 1, colorIndex: depth == 0 ? index : colorIndex)
-                        .frame(width: max(2, size.width * ratio(child, total)))
-                }
-            })
-        }
-        return AnyView(VStack(spacing: 1) {
-            ForEach(Array(children.enumerated()), id: \.element.id) { index, child in
-                mapNode(child, in: CGSize(width: size.width, height: size.height * ratio(child, total)), depth: depth + 1, colorIndex: depth == 0 ? index : colorIndex)
-                    .frame(height: max(2, size.height * ratio(child, total)))
-            }
-        })
-    }
-
-    private func displayChildren(of node: DiskNode, depth: Int) -> [DiskNode] {
-        let children = node.children.filter { $0.totalBytes > 0 }
-        guard depth < maxDepth - 1 else { return aggregate(children, parent: node.path) }
-
-        let directories = children.filter { $0.isDirectory }.sorted { $0.totalBytes > $1.totalBytes }
-        let files = children.filter { !$0.isDirectory }
-        var visible = Array(directories.prefix(12))
-        let remainder = Array(directories.dropFirst(12))
-        if !files.isEmpty {
-            visible += aggregate(files, parent: node.path, name: "Files")
-        }
-        if !remainder.isEmpty {
-            visible += aggregate(remainder, parent: node.path, name: "Other")
-        }
-        return visible.sorted { $0.totalBytes > $1.totalBytes }
-    }
-
-    private func aggregate(_ nodes: [DiskNode], parent: String, name: String = "More…") -> [DiskNode] {
-        guard !nodes.isEmpty else { return [] }
-        let bytes = nodes.reduce(Int64(0)) { $0 + $1.totalBytes }
-        return [DiskNode(path: parent + "/__\(name)__", name: name, isDirectory: true,
-                         ownBytes: 0, totalBytes: bytes,
-                         itemCount: nodes.reduce(0) { $0 + $1.itemCount },
-                         children: [], accessDenied: false)]
-    }
-
-    private func ratio(_ node: DiskNode, _ total: Int64) -> CGFloat {
-        CGFloat(Double(node.totalBytes) / Double(total))
-    }
-
-    private func tile(_ node: DiskNode, colorIndex: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(node.name).font(.caption.weight(.semibold)).lineLimit(2)
-            Text(Format.bytes(node.totalBytes)).font(.caption2).monospacedDigit()
-        }
-        .foregroundStyle(.white)
-        .padding(6)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(palette[colorIndex % palette.count].gradient)
-        .help("\(node.path) · \(Format.bytes(node.totalBytes))")
     }
 }
 
