@@ -1,0 +1,118 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "e55bc8f8dbd3e34a5dec15263451e4aa",
+  "type": "doc",
+  "slug": "appmodel-swift",
+  "title": "Sources/MacSpacesCore/Services/AppModel.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "core",
+    "CORE",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_1f182ae367",
+      "type": "heading",
+      "content": "Sources/MacSpacesCore/Services/AppModel.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_5a0bdfc48a",
+      "type": "paragraph",
+      "content": "The single source of observable truth for the UI: a @MainActor ObservableObject holding the volume list, the disk tree, both audit results, scan progress, and deletion feedback. Views inject it via .environmentObject and never touch the filesystem; every user action is a method call here."
+    },
+    {
+      "id": "blk_597fb6d807",
+      "type": "heading",
+      "content": "Scan orchestration",
+      "level": 2
+    },
+    {
+      "id": "blk_1fb3e48f1f",
+      "type": "paragraph",
+      "content": "scanDisk(root:) guards re-entrancy, resets published state, and starts two tasks: the scan task (DiskScanner.scan() \u2192 DiskNode, or scanWasCancelled on cancellation) and a progress sampling task that reads the ScanStats actor every 250 ms into the published ScanProgress. cancelScan() cancels the scan task; the sampling loop exits on its own Task.isCancelled check when the scan task finishes and calls progressTask?.cancel()."
+    },
+    {
+      "id": "blk_01a4f20f2d",
+      "type": "paragraph",
+      "content": "Both audits run on Task.detached(priority: .userInitiated) \u2014 audits do pure blocking filesystem work and must not occupy the MainActor \u2014 then hop back to publish ollamaAudit / llamaAudit. Settings (custom GGUF folders, source scan roots) are read from UserDefaults at audit time, so changes in Settings take effect on the next audit run without restart."
+    },
+    {
+      "id": "blk_7636443813",
+      "type": "heading",
+      "content": "Deletion and refresh",
+      "level": 2
+    },
+    {
+      "id": "blk_edc3f16f5b",
+      "type": "paragraph",
+      "content": "deleteFiles(at:mode:refresh:) funnels through TrashService with the effective mode (explicit mode, else the UserDefaults-backed deleteMode), reports a one-line summary ('Moved to Trash N items' / failure counts with the first error), then refreshes. RefreshTarget is an OptionSet (.ollama, .llama, .disk) so a llama.cpp cleanup re-runs the llama audit and sidebar badges update in place."
+    },
+    {
+      "id": "blk_cb2de3b247",
+      "type": "paragraph",
+      "content": "deleteOrphanedBlobs is deliberately hard-wired to .trash \u2014 orphans are the one place where even the permanent-delete setting must not apply. deleteOllamaModel computes OllamaAuditor.blobsUniqueTo and trashes manifest + unique blobs only. deleteDiskNode deletes on disk and then splices the node out of the in-memory tree with DiskNode.removing(path:), so ancestor sizes shrink instantly without a rescan (deleting the scan root itself clears the tree)."
+    },
+    {
+      "id": "blk_fd402d0485",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_5d5c5f471b",
+      "type": "field",
+      "content": "Async tree scan with 250 ms progress sampling and cancel",
+      "meta": {
+        "name": "public func scanDisk(root: URL?)"
+      }
+    },
+    {
+      "id": "blk_59e5b549cb",
+      "type": "field",
+      "content": "Detached-task audits publishing results on the MainActor",
+      "meta": {
+        "name": "public func runOllamaAudit() / runLlamaAudit()"
+      }
+    },
+    {
+      "id": "blk_4eeb4b3087",
+      "type": "field",
+      "content": "Trash/permanent delete + audit refresh via RefreshTarget",
+      "meta": {
+        "name": "public func deleteFiles(at:mode:refresh:)"
+      }
+    },
+    {
+      "id": "blk_7a702aa7d4",
+      "type": "field",
+      "content": "Delete plus immediate in-memory tree surgery",
+      "meta": {
+        "name": "public func deleteDiskNode(_:mode:)"
+      }
+    }
+  ],
+  "properties": {
+    "category": "core",
+    "path": "Sources/MacSpacesCore/Services/AppModel.swift",
+    "lines": 212,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "CORE",
+    "spec_refs": [
+      "README.md"
+    ],
+    "related": [
+      "diskscanner-swift",
+      "ollamaauditor-swift",
+      "trashservice-swift",
+      "contentview-swift"
+    ]
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

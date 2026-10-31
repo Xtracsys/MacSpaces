@@ -1,0 +1,99 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "3fff22a3004a46a127049e2076fab691",
+  "type": "doc",
+  "slug": "ollamaview-swift",
+  "title": "Sources/MacSpaces/Views/OllamaView.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "core",
+    "CORE",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_77c650202c",
+      "type": "heading",
+      "content": "Sources/MacSpaces/Views/OllamaView.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_126e8773ee",
+      "type": "paragraph",
+      "content": "The Ollama audit screen: header stat cards, the orphaned-blob workbench with selection and cleanup, the model table with shared-layer badges, and the ~/.ollama footprint. Auto-runs its audit once on first appearance via .task."
+    },
+    {
+      "id": "blk_1918658e02",
+      "type": "heading",
+      "content": "Orphan workbench",
+      "level": 2
+    },
+    {
+      "id": "blk_1a4d639a76",
+      "type": "paragraph",
+      "content": "Orphans render as checkbox rows (monospaced sha256 filenames) with per-blob reveal. Selection is a Set<BlobInfo.ID>; 'Clean Orphans\u2026' opens a confirmation dialog whose wording adapts \u2014 'All' or the selected count \u2014 and the destructive action routes through either model.deleteOrphanedBlobs (all) or deleteFiles with explicit .trash mode (selection). The total reclaimable size is always visible at the bottom of the section. An empty orphan list renders a green checkmark line instead of an empty table."
+    },
+    {
+      "id": "blk_4d220017b4",
+      "type": "heading",
+      "content": "Models and footprint",
+      "level": 2
+    },
+    {
+      "id": "blk_9b3f47e001",
+      "type": "paragraph",
+      "content": "Each model row shows qualifiedName (text-selectable), shared-layer and missing-blob badges, layer count, total size, and 'unique: N' when it differs from total \u2014 the number that actually disappears if you delete this model. Row actions reveal the manifest in Finder or open the delete-model dialog, whose message explains that shared blobs are kept and quantifies what will be trashed (the unique size). The header's Running badge warns when the Ollama server holds the blob store. Footprint lists every top-level ~/.ollama entry with size and reveal, exposing non-model waste like logs and backups."
+    },
+    {
+      "id": "blk_1f46ea43ec",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_951d22094a",
+      "type": "field",
+      "content": "Selectable orphan list + adaptive Clean Orphans confirmation",
+      "meta": {
+        "name": "orphanSection(_:)"
+      }
+    },
+    {
+      "id": "blk_78947bcfa1",
+      "type": "field",
+      "content": "Manifest table with shared/missing badges and per-model delete",
+      "meta": {
+        "name": "modelsSection(_:)"
+      }
+    },
+    {
+      "id": "blk_31e2873402",
+      "type": "field",
+      "content": "~/.ollama top-level size breakdown",
+      "meta": {
+        "name": "footprintSection(_:)"
+      }
+    }
+  ],
+  "properties": {
+    "category": "core",
+    "path": "Sources/MacSpaces/Views/OllamaView.swift",
+    "lines": 325,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "CORE",
+    "spec_refs": [
+      "README.md"
+    ],
+    "related": [
+      "ollamaauditor-swift",
+      "appmodel-swift",
+      "components-swift"
+    ]
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

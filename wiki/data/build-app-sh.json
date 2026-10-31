@@ -1,0 +1,108 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "e99017b3bb3bc364fbdb4e3e504b3c67",
+  "type": "doc",
+  "slug": "build-app-sh",
+  "title": "scripts/build-app.sh",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "meta",
+    "META",
+    "bash"
+  ],
+  "blocks": [
+    {
+      "id": "blk_f7e3cafd37",
+      "type": "heading",
+      "content": "scripts/build-app.sh",
+      "level": 1
+    },
+    {
+      "id": "blk_e34a8a8d73",
+      "type": "paragraph",
+      "content": "Turns the SwiftPM build into a double-clickable .app: release build \u2192 Contents/{MacOS,Resources} assembly \u2192 Info.plist \u2192 generated icon \u2192 ad-hoc signature. Encodes every toolchain workaround discovered during bring-up so a fresh clone builds with one command."
+    },
+    {
+      "id": "blk_43f58e8f6e",
+      "type": "heading",
+      "content": "SDK fallback",
+      "level": 2
+    },
+    {
+      "id": "blk_3abbfa1a8c",
+      "type": "paragraph",
+      "content": "If libSwiftUIMacros.dylib is absent from the CLT plugin directory (a defect in the 27.0 Command Line Tools: the SDK's SwiftUI uses macros but the plugin ships missing) and the 26.5 SDK exists, the script exports SDKROOT to the 26.5 SDK before building. On a machine with full Xcode installed the check passes and the default SDK is used unchanged."
+    },
+    {
+      "id": "blk_d34faf16d5",
+      "type": "paragraph",
+      "content": "The build step is swift build -c release --product MacSpaces \u2014 --product matters: a bare swift build also builds macspaces-tests, which needs -enable-testing and therefore fails in release. The binary path comes from --show-bin-path rather than guesswork."
+    },
+    {
+      "id": "blk_fefd630414",
+      "type": "heading",
+      "content": "Bundle assembly",
+      "level": 2
+    },
+    {
+      "id": "blk_67e2788598",
+      "type": "paragraph",
+      "content": "Writes Info.plist with CFBundleIdentifier com.macspaces.app, LSMinimumSystemVersion 13.0, public.app-category.utilities, NSHighResolutionCapable, and a CFBundleIconFile reference. Copies the executable, generates Resources/AppIcon.icns via the make-icon.swift script (failure is non-fatal and the icon plist key is deleted so no dangling reference remains), then clears extended attributes with xattr -cr before codesign --force --deep --sign - \u2014 the xattr step is load-bearing: Finder metadata detritus makes ad-hoc signing fail with 'resource fork, Finder information, or similar detritus not allowed'."
+    },
+    {
+      "id": "blk_a3fda7325a",
+      "type": "paragraph",
+      "content": "--install copies the finished bundle to /Applications, replacing any previous copy. The script prints the launch command (open build/MacSpaces.app) on success."
+    },
+    {
+      "id": "blk_f15196d540",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_ecc8172b7d",
+      "type": "field",
+      "content": "Build the bundle; optionally install to /Applications",
+      "meta": {
+        "name": "./scripts/build-app.sh [--install]"
+      }
+    },
+    {
+      "id": "blk_772c8f3cd7",
+      "type": "field",
+      "content": "Auto-detects the missing SwiftUIMacros plugin, pins 26.5 SDK",
+      "meta": {
+        "name": "SDKROOT fallback"
+      }
+    },
+    {
+      "id": "blk_312f546bb3",
+      "type": "field",
+      "content": "Prevents Finder-detritus signature failures",
+      "meta": {
+        "name": "xattr -cr before codesign"
+      }
+    }
+  ],
+  "properties": {
+    "category": "meta",
+    "path": "scripts/build-app.sh",
+    "lines": 85,
+    "lang": "bash",
+    "phase": "v1.0",
+    "status": "META",
+    "spec_refs": [
+      "README.md"
+    ],
+    "related": [
+      "make-icon-swift",
+      "overview-user-guide"
+    ]
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "17fc98a1a87e01adc5bf651969156be3",
+  "type": "doc",
+  "slug": "ollamaauditor-swift",
+  "title": "Sources/MacSpacesCore/Scanners/OllamaAuditor.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "core",
+    "CORE",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_6429b60397",
+      "type": "heading",
+      "content": "Sources/MacSpacesCore/Scanners/OllamaAuditor.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_c99aab5b6c",
+      "type": "paragraph",
+      "content": "The orphan-detection engine. Audits a local Ollama installation by parsing every model manifest, cross-referencing every blob, and reporting orphans, per-model sizes with shared-layer attribution, integrity problems, and the ~/.ollama footprint. Verified against a 31 GB real-world store with an independent implementation: identical results."
+    },
+    {
+      "id": "blk_d6d24176e6",
+      "type": "heading",
+      "content": "How Ollama's store works, and how it's parsed",
+      "level": 2
+    },
+    {
+      "id": "blk_55f89f0c48",
+      "type": "paragraph",
+      "content": "Ollama stores model weights as content-addressed blobs (blobs/sha256-<hex>) and describes each pullable model as a JSON manifest at manifests/<registry>/<namespace>/<name>/<tag>. Each manifest names a config blob plus layer blobs by digest (sha256:<hex>). OllamaAuditor walks the manifests tree with an enumerator (skipping .DS_Store), decodes each JSON leniently (all fields optional \u2014 hf.co manifests differ from registry.ollama.ai ones), and collects config.digest plus every layers[].digest."
+    },
+    {
+      "id": "blk_3cab971717",
+      "type": "paragraph",
+      "content": "blobFiles() lists blobs/sha256-* with allocated sizes and normalizes filenames back to digest form. The audit builds referenceCounts: digest \u2192 number of manifests referencing it. A blob with zero references is an orphan \u2014 wasted space from interrupted pulls or half-deleted models. A digest with two or more references is a shared layer (e.g. the same embeddings model reused across fine-tunes)."
+    },
+    {
+      "id": "blk_bdded15a1c",
+      "type": "heading",
+      "content": "Shared-layer attribution \u2014 and the bug it fixed",
+      "level": 2
+    },
+    {
+      "id": "blk_2d6fe25f9d",
+      "type": "paragraph",
+      "content": "After all manifests are parsed, a post-pass recomputes each model's uniqueSize (sum of blobs whose reference count is exactly 1) and sharedLayerCount. The first implementation subtracted audit.sharedBlobDigests \u2014 which is only populated after the post-pass runs \u2014 so every shared blob was wrongly counted as unique and shared layers showed sizes of 4096/8192 (APFS block size) in the fixtures. The fix filters on referenceCounts directly. This is exactly the class of bug the fixture tests exist to catch: two manifests, one shared layer, expected unique sizes of 12288 and 0."
+    },
+    {
+      "id": "blk_fba1f342d4",
+      "type": "heading",
+      "content": "Integrity and safety",
+      "level": 2
+    },
+    {
+      "id": "blk_3f6462adaf",
+      "type": "paragraph",
+      "content": "missingBlobDigests records digests a manifest references but which have no file on disk \u2014 the signature of a manually deleted blob store; such models are reported in the UI with a red badge instead of being silently miscounted."
+    },
+    {
+      "id": "blk_312348e31f",
+      "type": "paragraph",
+      "content": "blobsUniqueTo(model:allModels:blobs:) is the delete-a-model primitive: it collects the model's digests, subtracts every digest referenced by any other manifest, and returns the remaining blobs. AppModel.deleteOllamaModel trashes exactly those plus the manifest file \u2014 shared layers survive. isOllamaRunning reads ~/.ollama/ollama.pid and probes the pid with kill(pid, 0); garbage pids parse to not-running (tested), and the UI shows a Running badge warning that blob deletions take effect after a server restart."
+    },
+    {
+      "id": "blk_ef90c50ae7",
+      "type": "paragraph",
+      "content": "footprint() sizes every top-level entry under ~/.ollama (logs, backup, cache, keys) with sequentialSize, exposing non-model waste that the blob math can never see. A missing models directory produces a warning entry, not a failure \u2014 the audit result always renders."
+    },
+    {
+      "id": "blk_ed626b150f",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_890f94cd39",
+      "type": "field",
+      "content": "Manifests \u2192 referenceCounts \u2192 orphans, shared layers, footprint, integrity",
+      "meta": {
+        "name": "func audit() -> OllamaAudit"
+      }
+    },
+    {
+      "id": "blk_4a75249a2e",
+      "type": "field",
+      "content": "config.digest + layers[].digest, lenient JSON decode",
+      "meta": {
+        "name": "func referencedDigests(of:) -> [String]"
+      }
+    },
+    {
+      "id": "blk_338c0bb99d",
+      "type": "field",
+      "content": "Blobs safe to delete alongside one manifest",
+      "meta": {
+        "name": "static func blobsUniqueTo(model:allModels:blobs:)"
+      }
+    },
+    {
+      "id": "blk_7007f9ddd5",
+      "type": "field",
+      "content": "kill(pid, 0) probe against ~/.ollama/ollama.pid",
+      "meta": {
+        "name": "static func isOllamaRunning(home:) -> Bool"
+      }
+    }
+  ],
+  "properties": {
+    "category": "core",
+    "path": "Sources/MacSpacesCore/Scanners/OllamaAuditor.swift",
+    "lines": 231,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "CORE",
+    "spec_refs": [
+      "README.md"
+    ],
+    "related": [
+      "models-swift",
+      "appmodel-swift",
+      "diskscanner-swift"
+    ],
+    "tested_by": "macspaces-tests"
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

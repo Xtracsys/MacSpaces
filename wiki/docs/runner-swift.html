@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tests/MacSpacesTestRunner/Runner.swift</title>
+<style>
+:root{--bg:#0A0A0A;--panel:#131313;--panel2:#1A1A1A;--bd:#262626;
+--bd2:#333333;--tx:#E6E6E6;--mut:#8B8B8B;--fnt:#5C5C5C;
+--ac:#4ADE80;--red:#FF5252;--amb:#FFB000;--code:#101010;--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--ac);text-decoration:none} a:hover{text-decoration:underline}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);border:1px solid var(--bd);padding:.08em .35em;border-radius:3px;color:#d7f7e4}
+pre{font-family:var(--mono);font-size:.8rem;background:var(--code);border:1px solid var(--bd);border-radius:4px;padding:.9rem 1rem;overflow-x:auto;line-height:1.5;color:#cfe9d8}
+.wrap{max-width:1080px;margin:0 auto;padding:0 1.25rem}
+header.top{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.93);backdrop-filter:blur(6px);border-bottom:1px solid var(--bd)}
+.topbar{display:flex;align-items:center;gap:1.4rem;height:56px}
+.brand{font-family:var(--mono);font-weight:700;letter-spacing:.12em;color:var(--tx);font-size:.95rem}
+.brand b{color:var(--ac)}
+.topbar nav{display:flex;gap:1.1rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em}
+.topbar nav a{color:var(--mut)} .topbar nav a:hover{color:var(--ac);text-decoration:none}
+.status{margin-left:auto;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;color:var(--mut)}
+.status .dot{color:var(--ac)}
+.eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;color:var(--mut);text-transform:uppercase;margin-bottom:.6rem}
+h1{font-size:1.9rem;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+h2.sec{font-family:var(--mono);font-size:.8rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;margin:2.6rem 0 1rem;border-bottom:1px solid var(--bd);padding-bottom:.5rem}
+.hero{padding:3.4rem 0 2.6rem}
+.hero p.sub{color:var(--mut);max-width:62ch;margin-top:.9rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;padding:.6rem 1.1rem;border:1px solid var(--ac);border-radius:3px;color:var(--ac);text-transform:uppercase}
+.btn.solid{background:var(--ac);color:#06130b;font-weight:700}
+.btn:hover{text-decoration:none;filter:brightness(1.1)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--bd);border:1px solid var(--bd);border-radius:6px;overflow:hidden;margin:2rem 0}
+.stat{background:var(--panel);padding:1rem 1.1rem}
+.stat .n{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--ac)}
+.stat .l{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1px;background:var(--bd);border:1px solid var(--bd);border-radius:6px;overflow:hidden}
+.card{background:var(--panel);padding:1rem 1.1rem;display:block;color:var(--tx)}
+.card:hover{background:var(--panel2);text-decoration:none}
+.card .f{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;color:var(--fnt);text-transform:uppercase}
+.card .t{font-weight:600;font-size:.92rem;margin:.3rem 0 .25rem}
+.card .d{color:var(--mut);font-size:.8rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+footer.bottom{border-top:1px solid var(--bd);margin-top:4rem;padding:1.6rem 0 2.4rem}
+footer .foot{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;color:var(--faint);display:flex;gap:1.6rem;flex-wrap:wrap}
+footer .foot b{color:var(--mut);font-weight:500}
+.artgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:2.4rem;padding:2.2rem 0}
+@media(max-width:880px){.artgrid{grid-template-columns:1fr}.infobox{order:-1}}
+.article h1{font-size:1.75rem}
+.lede{font-size:1.05rem}
+.article p{margin:.8rem 0;color:#cfcfcf}
+.article h3{font-size:1.05rem;margin:1.6rem 0 .2rem}
+.infobox{background:var(--panel);border:1px solid var(--bd);border-radius:6px;font-family:var(--mono);font-size:.72rem;align-self:start;position:sticky;top:76px}
+.infobox .ih{padding:.7rem .9rem;border-bottom:1px solid var(--bd);letter-spacing:.16em;color:var(--ac);text-transform:uppercase;font-size:.64rem}
+.infobox .ir{display:flex;justify-content:space-between;gap:1rem;padding:.42rem .9rem;border-bottom:1px solid var(--bd)}
+.infobox .ir:last-child{border-bottom:0}
+.infobox .k{color:var(--fnt);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.infobox .v{color:var(--tx);text-align:right;word-break:break-all}
+.infobox .v a{display:block}
+table.ki{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.84rem}
+table.ki th{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--bd2)}
+table.ki td{padding:.5rem .6rem;border-bottom:1px solid var(--bd);vertical-align:top;color:#cfcfcf}
+table.ki td:first-child{font-family:var(--mono);font-size:.76rem;color:var(--ac);white-space:nowrap}
+.badge{display:inline-block;font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--bd2);border-radius:3px;padding:.14rem .45rem;color:var(--mut)}
+.badge.core{border-color:var(--ac);color:var(--ac)}
+.badge.test{border-color:var(--amb);color:var(--amb)}
+.badge.spec{border-color:#6da9ff;color:#6da9ff}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--bd2);margin:1.8rem 0 1.4rem}
+.tab{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);padding:.6rem 1.1rem;cursor:pointer;border:1px solid transparent;border-bottom:0;position:relative;top:1px;user-select:none}
+.tab.on{color:var(--ac);border-color:var(--bd2);background:var(--panel);border-top:2px solid var(--ac)}
+.panel{display:none} .panel.on{display:block}
+.master-index h4{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;margin:1.2rem 0 .4rem}
+.master-index ul{list-style:none}
+.master-index li{padding:.22rem 0;border-bottom:1px dashed var(--bd)}
+.master-index li a{font-size:.86rem}
+.master-index li span{font-family:var(--mono);font-size:.68rem;color:var(--fnt)}
+</style></head>
+<body>
+<header class="top"><div class="wrap topbar">
+<div class="brand">CODE<b>WIKI</b></div>
+<nav><a href="../index.html#cat-specs">SPECIFICATIONS</a><a href="../index.html#cat-overview">OVERVIEWS</a><a href="../index.html#cat-core">CORE</a><a href="../index.html#cat-tests">TESTS</a><a href="../index.html#cat-meta">META</a></nav>
+<div class="status"><span class="dot">&#9679;</span> BUILD VERIFIED &nbsp;/&nbsp; main@unknown</div>
+</div></header>
+<div class="wrap artgrid">
+<article class="article panel on" id="p-article">
+<div class="eyebrow">FILE / 01 &nbsp;·&nbsp; Tests/MacSpacesTestRunner/Runner.swift &nbsp;·&nbsp; 292 LINES</div>
+<h1>Tests/MacSpacesTestRunner/Runner.swift</h1>
+<p class="lede">41 assertions across four suites, run by a hand-rolled harness that exits non-zero on failure. The harness exists because this machine&#x27;s Command Line Tools ship neither the macOS XCTest framework (swift test fails with &#x27;unable to resolve module dependency: XCTest&#x27;) nor the Swift Testing macro plugin — the same toolchain gap that forced the 26.5 SDK fallback for SwiftUI macros.</p><h3>Harness</h3><p>TestRecorder collects per-assertion failures with file/line and counts passes; expectEqual is a thin Equatable wrapper that prints both values in the failure line. @main TestMain runs the suites, prints &#x27;Passed assertions: N&#x27; and &#x27;ALL TESTS PASSED&#x27; or the numbered failure list, and exits 1 on any failure. Run with: swift run --scratch-path .build/tests macspaces-tests (the separate scratch path lets tests build under the default SDK while the SwiftUI app builds under 26.5).</p><p>The test target depends only on MacSpacesCore and uses @testable import MacSpacesCore — legal because SwiftPM passes -enable-testing in debug builds. A plain import compiles but makes every internal Core type invisible, which produced a very confusing &#x27;cannot find DiskNode&#x27; phase during bring-up.</p><h3>OllamaAuditTests — the orphan engine</h3><p>Fixtures build a temp ~/.ollama with makeBlob (sizes in multiples of 4096 so APFS allocated size equals written size — the first run&#x27;s 1000-byte blobs reported 4096 and broke every size assertion) and makeManifest writing real manifest JSON with config/layers digests.</p><p>orphanDetectionAndSharedLayers is the core case: two manifests sharing one layer, one orphan blob. Asserts the orphan set and byte total, shared detection, model A&#x27;s total (4096 + 4096 + 8192 = 16384), its unique size (12288), shared count (1), and model B&#x27;s unique size of 0. This is the test that caught the sharedBlobDigests-before-population ordering bug. missingBlobsReported covers phantom digests; blobsUniqueToModel proves a shared layer is excluded from model deletion; processDetection writes our own pid to ollama.pid (must report running) and &#x27;not-a-pid&#x27; (must not). Each test gets a fresh temp root — an early version shared one root and accumulated manifests across tests.</p><p>Path comparisons resolve symlinks on both sides: FileManager.temporaryDirectory hands out /var/folders/... while enumerators return the resolved /private/var/folders/..., so raw URL equality silently failed. resolvingSymlinks via URL handles this.</p><h3>LlamaAuditTests and DiskTreeTests</h3><p>LlamaAuditTests: prettyModelName (models--org--name → org/name), tilde expansion, duplicate detection (two identical payloads + one different file → exactly one group of two excluding the different file), and a custom-folder end-to-end audit. DiskTreeTests: removing() splices a file out of a two-level tree and shrinks both ancestor totals (asserts 100 remaining after removing a 500-byte file from a 600-byte tree — an early draft of the fixture put the file at the wrong path and the test accidentally passed with the broken implementation), largestFiles ordering, and all five shouldSkip rules including the root-prefix-only-at-&#x27;/&#x27; case.</p><h3>Key items</h3><table class='ki'><tr><th>item</th><th>what it does</th></tr><tr><td>TestRecorder / expectEqual</td><td>Macro-free assertions with file:line failure reporting</td></tr><tr><td>withTempRoot(_ body:)</td><td>Fresh fixture root per test, cleaned up in defer</td></tr><tr><td>swift run --scratch-path .build/tests macspaces-tests</td><td>How to run the suite</td></tr></table>
+</article>
+<aside class="panel" id="p-data"><div style="width:100%">
+<div class="eyebrow">// CANONICAL PAYLOAD — EMBEDDED JSON</div>
+<pre>{
+  &quot;$schema&quot;: &quot;https://code-wiki.local/schema/article.json&quot;,
+  &quot;id&quot;: &quot;8930beada01a683c69c374ed098c7769&quot;,
+  &quot;type&quot;: &quot;doc&quot;,
+  &quot;slug&quot;: &quot;runner-swift&quot;,
+  &quot;title&quot;: &quot;Tests/MacSpacesTestRunner/Runner.swift&quot;,
+  &quot;version&quot;: 1,
+  &quot;updated&quot;: &quot;2026-09-25T00:35:17Z&quot;,
+  &quot;tags&quot;: [
+    &quot;tests&quot;,
+    &quot;TEST&quot;,
+    &quot;Swift&quot;
+  ],
+  &quot;blocks&quot;: [
+    {
+      &quot;id&quot;: &quot;blk_25ce9f771c&quot;,
+      &quot;type&quot;: &quot;heading&quot;,
+      &quot;content&quot;: &quot;Tests/MacSpacesTestRunner/Runner.swift&quot;,
+      &quot;level&quot;: 1
+    },
+    {
+      &quot;id&quot;: &quot;blk_0f4c710a29&quot;,
+      &quot;type&quot;: &quot;paragraph&quot;,
+      &quot;content&quot;: &quot;41 assertions across four suites, run by a hand-rolled harness that exits non-zero on failure. The harness exists because this machine&#x27;s Command Line Tools ship neither the macOS XCTest framework (swift test fails with &#x27;unable to resolve module dependency: XCTest&#x27;) nor the Swift Testing macro plugin \u2014 the same toolchain gap that forced the 26.5 SDK fallback for SwiftUI macros.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;blk_329e251663&quot;,
+      &quot;type&quot;: &quot;heading&quot;,
+      &quot;content&quot;: &quot;Harness&quot;,
+      &quot;level&quot;: 2
+    },
+    {
+      &quot;id&quot;: &quot;blk_c8002e41c6&quot;,
+      &quot;type&quot;: &quot;paragraph&quot;,
+      &quot;content&quot;: &quot;TestRecorder collects per-assertion failures with file/line and counts passes; expectEqual is a thin Equatable wrapper that prints both values in the failure line. @main TestMain runs the suites, prints &#x27;Passed assertions: N&#x27; and &#x27;ALL TESTS PASSED&#x27; or the numbered failure list, and exits 1 on any failure. Run with: swift run --scratch-path .build/tests macspaces-tests (the separate scratch path lets tests build under the default SDK while the SwiftUI app builds under 26.5).&quot;
+    },
+    {
+      &quot;id&quot;: &quot;blk_0d7075d140&quot;,
+      &quot;type&quot;: &quot;paragraph&quot;,
+      &quot;content&quot;: &quot;The test target depends only on MacSpacesCore and uses @testable import MacSpacesCore \u2014 legal because SwiftPM passes -enable-testing in debug builds. A plain import compiles but makes every internal Core type invisible, which produced a very confusing &#x27;cannot find DiskNode&#x27; phase during bring-up.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;blk_bfc1cff7b7&quot;,
+      &quot;type&quot;: &quot;heading&quot;,
+      &quot;content&quot;: &quot;OllamaAuditTests \u2014 the orphan engine&quot;,
+      &quot;level&quot;: 2
+    },
+    {
+      &quot;id&quot;: &quot;blk_7d196a6d6a&quot;,
+      &quot;type&quot;: &quot;paragraph&quot;,
+      &quot;content&quot;: &quot;Fixtures build a temp ~/.ollama with makeBlob (sizes in multiples of 4096 so APFS allocated size equals written size \u2014 the first run&#x27;s 1000-byte blobs reported 4096 and broke every size assertion) and makeManifest writing real manifest JSON with config/layers digests.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;blk_2dda687909&quot;,
+      &quot;type&quot;: &quot;paragraph&quot;,
+      &quot;content&quot;: &quot;orphanDetectionAndSharedLayers is the core case: two manifests sharing one layer, one orphan blob. Asserts the orphan set and byte total, shared detection, model A&#x27;s total (4096 + 4096 + 8192 = 16384), its unique size (12288), shared count (1), and model B&#x27;s unique size of 0. This is the test that caught the sharedBlobDigests-before-population ordering bug. missingBlobsReported covers phantom digests; blobsUniqueToModel proves a shared layer is excluded from model deletion; processDetection writes our own pid to ollama.pid (must report running) and &#x27;not-a-pid&#x27; (must not). Each test gets a fresh temp root \u2014 an early version shared one root and accumulated manifests across tests.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;blk_77fdd3477c&quot;,
+      &quot;type&quot;: &quot;paragraph&quot;,
+      &quot;content&quot;: &quot;Path comparisons resolve symlinks on both sides: FileManager.temporaryDirectory hands out /var/folders/... while enumerators return the resolved /private/var/folders/..., so raw URL equality silently failed. resolvingSymlinks via URL handles this.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;blk_b0a901ba52&quot;,
+      &quot;type&quot;: &quot;heading&quot;,
+      &quot;content&quot;: &quot;LlamaAuditTests and DiskTreeTests&quot;,
+      &quot;level&quot;: 2
+    },
+    {
+      &quot;id&quot;: &quot;blk_bb340b784f&quot;,
+      &quot;type&quot;: &quot;paragraph&quot;,
+      &quot;content&quot;: &quot;LlamaAuditTests: prettyModelName (models--org--name \u2192 org/name), tilde expansion, duplicate detection (two identical payloads + one different file \u2192 exactly one group of two excluding the different file), and a custom-folder end-to-end audit. DiskTreeTests: removing() splices a file out of a two-level tree and shrinks both ancestor totals (asserts 100 remaining after removing a 500-byte file from a 600-byte tree \u2014 an early draft of the fixture put the file at the wrong path and the test accidentally passed with the broken implementation), largestFiles ordering, and all five shouldSkip rules including the root-prefix-only-at-&#x27;/&#x27; case.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;blk_4957673c73&quot;,
+      &quot;type&quot;: &quot;heading&quot;,
+      &quot;content&quot;: &quot;Key items&quot;,
+      &quot;level&quot;: 2
+    },
+    {
+      &quot;id&quot;: &quot;blk_99eb8d34b1&quot;,
+      &quot;type&quot;: &quot;field&quot;,
+      &quot;content&quot;: &quot;Macro-free assertions with file:line failure reporting&quot;,
+      &quot;meta&quot;: {
+        &quot;name&quot;: &quot;TestRecorder / expectEqual&quot;
+      }
+    },
+    {
+      &quot;id&quot;: &quot;blk_9c8aef60c3&quot;,
+      &quot;type&quot;: &quot;field&quot;,
+      &quot;content&quot;: &quot;Fresh fixture root per test, cleaned up in defer&quot;,
+      &quot;meta&quot;: {
+        &quot;name&quot;: &quot;withTempRoot(_ body:)&quot;
+      }
+    },
+    {
+      &quot;id&quot;: &quot;blk_cd49b4f0c6&quot;,
+      &quot;type&quot;: &quot;field&quot;,
+      &quot;content&quot;: &quot;How to run the suite&quot;,
+      &quot;meta&quot;: {
+        &quot;name&quot;: &quot;swift run --scratch-path .build/tests macspaces-tests&quot;
+      }
+    }
+  ],
+  &quot;properties&quot;: {
+    &quot;category&quot;: &quot;tests&quot;,
+    &quot;path&quot;: &quot;Tests/MacSpacesTestRunner/Runner.swift&quot;,
+    &quot;lines&quot;: 292,
+    &quot;lang&quot;: &quot;Swift&quot;,
+    &quot;phase&quot;: &quot;v1.0&quot;,
+    &quot;status&quot;: &quot;TEST&quot;,
+    &quot;spec_refs&quot;: [],
+    &quot;related&quot;: [
+      &quot;ollamaauditor-swift&quot;,
+      &quot;llamaauditor-swift&quot;,
+      &quot;models-swift&quot;
+    ]
+  },
+  &quot;audit&quot;: {
+    &quot;last_editor&quot;: &quot;human:wiki-generator&quot;,
+    &quot;last_commit&quot;: &quot;unknown&quot;
+  }
+}</pre></div></aside>
+<aside class="panel master-index" id="p-index"><div class="master-index"><h4>// Overviews</h4><ul><li><a href="overview-architecture.html">MacSpaces — Architecture Overview</a><span> (system)</span></li><li><a href="overview-user-guide.html">User Guide — Using MacSpaces Day to Day</a><span> (guide)</span></li></ul><h4>// Core</h4><ul><li><a href="models-swift.html">Sources/MacSpacesCore/Models/Models.swift</a><span> Sources/MacSpacesCore/Models/Models.swift</span></li><li><a href="diskscanner-swift.html">Sources/MacSpacesCore/Scanners/DiskScanner.swift</a><span> Sources/MacSpacesCore/Scanners/DiskScanner.swift</span></li><li><a href="ollamaauditor-swift.html">Sources/MacSpacesCore/Scanners/OllamaAuditor.swift</a><span> Sources/MacSpacesCore/Scanners/OllamaAuditor.swift</span></li><li><a href="llamaauditor-swift.html">Sources/MacSpacesCore/Scanners/LlamaAuditor.swift</a><span> Sources/MacSpacesCore/Scanners/LlamaAuditor.swift</span></li><li><a href="appmodel-swift.html">Sources/MacSpacesCore/Services/AppModel.swift</a><span> Sources/MacSpacesCore/Services/AppModel.swift</span></li><li><a href="trashservice-swift.html">Sources/MacSpacesCore/Services/TrashService.swift</a><span> Sources/MacSpacesCore/Services/TrashService.swift</span></li><li><a href="volumemonitor-swift.html">Sources/MacSpacesCore/Services/VolumeMonitor.swift</a><span> Sources/MacSpacesCore/Services/VolumeMonitor.swift</span></li><li><a href="macspacesapp-swift.html">Sources/MacSpaces/MacSpacesApp.swift</a><span> Sources/MacSpaces/MacSpacesApp.swift</span></li><li><a href="components-swift.html">Sources/MacSpaces/Views/Components.swift</a><span> Sources/MacSpaces/Views/Components.swift</span></li><li><a href="contentview-swift.html">Sources/MacSpaces/Views/ContentView.swift</a><span> Sources/MacSpaces/Views/ContentView.swift</span></li><li><a href="dashboardview-swift.html">Sources/MacSpaces/Views/DashboardView.swift</a><span> Sources/MacSpaces/Views/DashboardView.swift</span></li><li><a href="disktree-swift.html">Sources/MacSpaces/Views/DiskTreeView.swift</a><span> Sources/MacSpaces/Views/DiskTreeView.swift</span></li><li><a href="ollamaview-swift.html">Sources/MacSpaces/Views/OllamaView.swift</a><span> Sources/MacSpaces/Views/OllamaView.swift</span></li><li><a href="llamaview-swift.html">Sources/MacSpaces/Views/LlamaView.swift</a><span> Sources/MacSpaces/Views/LlamaView.swift</span></li><li><a href="settingsview-swift.html">Sources/MacSpaces/Views/SettingsView.swift</a><span> Sources/MacSpaces/Views/SettingsView.swift</span></li></ul><h4>// Tests</h4><ul><li><a href="runner-swift.html">Tests/MacSpacesTestRunner/Runner.swift</a><span> Tests/MacSpacesTestRunner/Runner.swift <span>&#9656; CURRENT</span></span></li></ul><h4>// Meta</h4><ul><li><a href="package-swift.html">Package.swift</a><span> Package.swift</span></li><li><a href="build-app-sh.html">scripts/build-app.sh</a><span> scripts/build-app.sh</span></li><li><a href="make-icon-swift.html">scripts/make-icon.swift</a><span> scripts/make-icon.swift</span></li><li><a href="readme-md.html">README.md</a><span> README.md</span></li></ul></div><p style="margin-top:1rem"><a class="btn" href="../index.html">&#8592; WIKI HOME</a></p></aside>
+<aside class="infobox"><div class="ih">&#9635; DOSSIER — TEST</div><div class="ir"><span class="k">Path</span><span class="v"><code>Tests/MacSpacesTestRunner/Runner.swift</code></span></div><div class="ir"><span class="k">Lines</span><span class="v">292</span></div><div class="ir"><span class="k">Language</span><span class="v">Swift</span></div><div class="ir"><span class="k">Package</span><span class="v">macspaces-tests</span></div><div class="ir"><span class="k">Phase</span><span class="v">v1.0</span></div><div class="ir"><span class="k">See also</span><span class="v"><a href="ollamaauditor-swift.html">Sources/MacSpacesCore/Scanners/OllamaAuditor.swift</a><br><a href="llamaauditor-swift.html">Sources/MacSpacesCore/Scanners/LlamaAuditor.swift</a><br><a href="models-swift.html">Sources/MacSpacesCore/Models/Models.swift</a></span></div><div class="ir"><span class="k">Canonical data</span><span class="v"><a href="../data/runner-swift.json">runner-swift.json</a></span></div></aside>
+</div>
+<div class="wrap"><div class="tabs">
+<div class="tab on" data-tab="article">&#9635; ARTICLE</div>
+<div class="tab" data-tab="data">&#123;&#125; DATA / JSON</div>
+<div class="tab" data-tab="index">&#9776; MASTER INDEX</div>
+</div><p style="font-family:var(--mono);font-size:.66rem;color:var(--faint);padding-bottom:2rem">
+THE EMBEDDED PAYLOAD IN THIS FILE'S SOURCE IS MACHINE-READABLE (script#leet-doc).</p></div>
+<footer class="bottom"><div class="wrap foot">
+<span><b>NODE 001 / ACTIVE</b></span>
+<span>GENERATED 2026-09-25 00:35 UTC</span>
+</div></footer>
+<script>
+document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){
+ document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('on',x===t)});
+ document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('on',p.id==='p-'+t.dataset.tab)});
+ window.scrollTo({top:0});
+});});
+</script>
+<script type="application/json" id="leet-doc">{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "8930beada01a683c69c374ed098c7769",
+  "type": "doc",
+  "slug": "runner-swift",
+  "title": "Tests/MacSpacesTestRunner/Runner.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "tests",
+    "TEST",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_25ce9f771c",
+      "type": "heading",
+      "content": "Tests/MacSpacesTestRunner/Runner.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_0f4c710a29",
+      "type": "paragraph",
+      "content": "41 assertions across four suites, run by a hand-rolled harness that exits non-zero on failure. The harness exists because this machine's Command Line Tools ship neither the macOS XCTest framework (swift test fails with 'unable to resolve module dependency: XCTest') nor the Swift Testing macro plugin \u2014 the same toolchain gap that forced the 26.5 SDK fallback for SwiftUI macros."
+    },
+    {
+      "id": "blk_329e251663",
+      "type": "heading",
+      "content": "Harness",
+      "level": 2
+    },
+    {
+      "id": "blk_c8002e41c6",
+      "type": "paragraph",
+      "content": "TestRecorder collects per-assertion failures with file/line and counts passes; expectEqual is a thin Equatable wrapper that prints both values in the failure line. @main TestMain runs the suites, prints 'Passed assertions: N' and 'ALL TESTS PASSED' or the numbered failure list, and exits 1 on any failure. Run with: swift run --scratch-path .build/tests macspaces-tests (the separate scratch path lets tests build under the default SDK while the SwiftUI app builds under 26.5)."
+    },
+    {
+      "id": "blk_0d7075d140",
+      "type": "paragraph",
+      "content": "The test target depends only on MacSpacesCore and uses @testable import MacSpacesCore \u2014 legal because SwiftPM passes -enable-testing in debug builds. A plain import compiles but makes every internal Core type invisible, which produced a very confusing 'cannot find DiskNode' phase during bring-up."
+    },
+    {
+      "id": "blk_bfc1cff7b7",
+      "type": "heading",
+      "content": "OllamaAuditTests \u2014 the orphan engine",
+      "level": 2
+    },
+    {
+      "id": "blk_7d196a6d6a",
+      "type": "paragraph",
+      "content": "Fixtures build a temp ~/.ollama with makeBlob (sizes in multiples of 4096 so APFS allocated size equals written size \u2014 the first run's 1000-byte blobs reported 4096 and broke every size assertion) and makeManifest writing real manifest JSON with config/layers digests."
+    },
+    {
+      "id": "blk_2dda687909",
+      "type": "paragraph",
+      "content": "orphanDetectionAndSharedLayers is the core case: two manifests sharing one layer, one orphan blob. Asserts the orphan set and byte total, shared detection, model A's total (4096 + 4096 + 8192 = 16384), its unique size (12288), shared count (1), and model B's unique size of 0. This is the test that caught the sharedBlobDigests-before-population ordering bug. missingBlobsReported covers phantom digests; blobsUniqueToModel proves a shared layer is excluded from model deletion; processDetection writes our own pid to ollama.pid (must report running) and 'not-a-pid' (must not). Each test gets a fresh temp root \u2014 an early version shared one root and accumulated manifests across tests."
+    },
+    {
+      "id": "blk_77fdd3477c",
+      "type": "paragraph",
+      "content": "Path comparisons resolve symlinks on both sides: FileManager.temporaryDirectory hands out /var/folders/... while enumerators return the resolved /private/var/folders/..., so raw URL equality silently failed. resolvingSymlinks via URL handles this."
+    },
+    {
+      "id": "blk_b0a901ba52",
+      "type": "heading",
+      "content": "LlamaAuditTests and DiskTreeTests",
+      "level": 2
+    },
+    {
+      "id": "blk_bb340b784f",
+      "type": "paragraph",
+      "content": "LlamaAuditTests: prettyModelName (models--org--name \u2192 org/name), tilde expansion, duplicate detection (two identical payloads + one different file \u2192 exactly one group of two excluding the different file), and a custom-folder end-to-end audit. DiskTreeTests: removing() splices a file out of a two-level tree and shrinks both ancestor totals (asserts 100 remaining after removing a 500-byte file from a 600-byte tree \u2014 an early draft of the fixture put the file at the wrong path and the test accidentally passed with the broken implementation), largestFiles ordering, and all five shouldSkip rules including the root-prefix-only-at-'/' case."
+    },
+    {
+      "id": "blk_4957673c73",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_99eb8d34b1",
+      "type": "field",
+      "content": "Macro-free assertions with file:line failure reporting",
+      "meta": {
+        "name": "TestRecorder / expectEqual"
+      }
+    },
+    {
+      "id": "blk_9c8aef60c3",
+      "type": "field",
+      "content": "Fresh fixture root per test, cleaned up in defer",
+      "meta": {
+        "name": "withTempRoot(_ body:)"
+      }
+    },
+    {
+      "id": "blk_cd49b4f0c6",
+      "type": "field",
+      "content": "How to run the suite",
+      "meta": {
+        "name": "swift run --scratch-path .build/tests macspaces-tests"
+      }
+    }
+  ],
+  "properties": {
+    "category": "tests",
+    "path": "Tests/MacSpacesTestRunner/Runner.swift",
+    "lines": 292,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "TEST",
+    "spec_refs": [],
+    "related": [
+      "ollamaauditor-swift",
+      "llamaauditor-swift",
+      "models-swift"
+    ]
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}</script>
+</body></html>

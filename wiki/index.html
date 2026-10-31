@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Home</title>
+<style>
+:root{--bg:#0A0A0A;--panel:#131313;--panel2:#1A1A1A;--bd:#262626;
+--bd2:#333333;--tx:#E6E6E6;--mut:#8B8B8B;--fnt:#5C5C5C;
+--ac:#4ADE80;--red:#FF5252;--amb:#FFB000;--code:#101010;--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{color:var(--ac);text-decoration:none} a:hover{text-decoration:underline}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);border:1px solid var(--bd);padding:.08em .35em;border-radius:3px;color:#d7f7e4}
+pre{font-family:var(--mono);font-size:.8rem;background:var(--code);border:1px solid var(--bd);border-radius:4px;padding:.9rem 1rem;overflow-x:auto;line-height:1.5;color:#cfe9d8}
+.wrap{max-width:1080px;margin:0 auto;padding:0 1.25rem}
+header.top{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.93);backdrop-filter:blur(6px);border-bottom:1px solid var(--bd)}
+.topbar{display:flex;align-items:center;gap:1.4rem;height:56px}
+.brand{font-family:var(--mono);font-weight:700;letter-spacing:.12em;color:var(--tx);font-size:.95rem}
+.brand b{color:var(--ac)}
+.topbar nav{display:flex;gap:1.1rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em}
+.topbar nav a{color:var(--mut)} .topbar nav a:hover{color:var(--ac);text-decoration:none}
+.status{margin-left:auto;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;color:var(--mut)}
+.status .dot{color:var(--ac)}
+.eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;color:var(--mut);text-transform:uppercase;margin-bottom:.6rem}
+h1{font-size:1.9rem;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+h2.sec{font-family:var(--mono);font-size:.8rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;margin:2.6rem 0 1rem;border-bottom:1px solid var(--bd);padding-bottom:.5rem}
+.hero{padding:3.4rem 0 2.6rem}
+.hero p.sub{color:var(--mut);max-width:62ch;margin-top:.9rem}
+.btn{display:inline-block;font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;padding:.6rem 1.1rem;border:1px solid var(--ac);border-radius:3px;color:var(--ac);text-transform:uppercase}
+.btn.solid{background:var(--ac);color:#06130b;font-weight:700}
+.btn:hover{text-decoration:none;filter:brightness(1.1)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--bd);border:1px solid var(--bd);border-radius:6px;overflow:hidden;margin:2rem 0}
+.stat{background:var(--panel);padding:1rem 1.1rem}
+.stat .n{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--ac)}
+.stat .l{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1px;background:var(--bd);border:1px solid var(--bd);border-radius:6px;overflow:hidden}
+.card{background:var(--panel);padding:1rem 1.1rem;display:block;color:var(--tx)}
+.card:hover{background:var(--panel2);text-decoration:none}
+.card .f{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;color:var(--fnt);text-transform:uppercase}
+.card .t{font-weight:600;font-size:.92rem;margin:.3rem 0 .25rem}
+.card .d{color:var(--mut);font-size:.8rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+footer.bottom{border-top:1px solid var(--bd);margin-top:4rem;padding:1.6rem 0 2.4rem}
+footer .foot{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;color:var(--faint);display:flex;gap:1.6rem;flex-wrap:wrap}
+footer .foot b{color:var(--mut);font-weight:500}
+.artgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:2.4rem;padding:2.2rem 0}
+@media(max-width:880px){.artgrid{grid-template-columns:1fr}.infobox{order:-1}}
+.article h1{font-size:1.75rem}
+.lede{font-size:1.05rem}
+.article p{margin:.8rem 0;color:#cfcfcf}
+.article h3{font-size:1.05rem;margin:1.6rem 0 .2rem}
+.infobox{background:var(--panel);border:1px solid var(--bd);border-radius:6px;font-family:var(--mono);font-size:.72rem;align-self:start;position:sticky;top:76px}
+.infobox .ih{padding:.7rem .9rem;border-bottom:1px solid var(--bd);letter-spacing:.16em;color:var(--ac);text-transform:uppercase;font-size:.64rem}
+.infobox .ir{display:flex;justify-content:space-between;gap:1rem;padding:.42rem .9rem;border-bottom:1px solid var(--bd)}
+.infobox .ir:last-child{border-bottom:0}
+.infobox .k{color:var(--fnt);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.infobox .v{color:var(--tx);text-align:right;word-break:break-all}
+.infobox .v a{display:block}
+table.ki{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.84rem}
+table.ki th{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--bd2)}
+table.ki td{padding:.5rem .6rem;border-bottom:1px solid var(--bd);vertical-align:top;color:#cfcfcf}
+table.ki td:first-child{font-family:var(--mono);font-size:.76rem;color:var(--ac);white-space:nowrap}
+.badge{display:inline-block;font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--bd2);border-radius:3px;padding:.14rem .45rem;color:var(--mut)}
+.badge.core{border-color:var(--ac);color:var(--ac)}
+.badge.test{border-color:var(--amb);color:var(--amb)}
+.badge.spec{border-color:#6da9ff;color:#6da9ff}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--bd2);margin:1.8rem 0 1.4rem}
+.tab{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);padding:.6rem 1.1rem;cursor:pointer;border:1px solid transparent;border-bottom:0;position:relative;top:1px;user-select:none}
+.tab.on{color:var(--ac);border-color:var(--bd2);background:var(--panel);border-top:2px solid var(--ac)}
+.panel{display:none} .panel.on{display:block}
+.master-index h4{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;margin:1.2rem 0 .4rem}
+.master-index ul{list-style:none}
+.master-index li{padding:.22rem 0;border-bottom:1px dashed var(--bd)}
+.master-index li a{font-size:.86rem}
+.master-index li span{font-family:var(--mono);font-size:.68rem;color:var(--fnt)}
+</style></head>
+<body>
+<header class="top"><div class="wrap topbar">
+<div class="brand">CODE<b>WIKI</b></div>
+<nav><a href="index.html#cat-specs">SPECIFICATIONS</a><a href="index.html#cat-overview">OVERVIEWS</a><a href="index.html#cat-core">CORE</a><a href="index.html#cat-tests">TESTS</a><a href="index.html#cat-meta">META</a></nav>
+<div class="status"><span class="dot">&#9679;</span> BUILD VERIFIED &nbsp;/&nbsp; main@unknown</div>
+</div></header>
+<section class="hero"><div class="wrap">
+<div class="eyebrow">FILE / 00 &nbsp;·&nbsp; INTERNAL WIKI &nbsp;·&nbsp; 22 ARTICLES</div>
+<h1>Code Wiki — the codebase, documented file by file</h1>
+<p class="sub">Every article documents one file: purpose, key functions, interactions, and the
+decisions it implements. Tabbed HTML with an embedded canonical JSON payload per page,
+mirrored as JSON data files, indexed in Markdown.</p>
+<p style="margin-top:1.2rem"><a class="btn solid" href="#cat-specs">BEGIN READING</a>
+<a class="btn" href="INDEX.md" style="margin-left:.6rem">INDEX.MD</a></p>
+<div class="stats">
+<div class="stat"><div class="n">22</div><div class="l">articles</div></div>
+<div class="stat"><div class="n">3,569</div><div class="l">source lines covered</div></div>
+</div></div></section><section id="cat-overview" class="wrap" style="padding-bottom:2rem">
+<h2 class="sec">Overviews <span style="color:var(--fnt);text-transform:none;letter-spacing:.04em">&nbsp;// orientation · 2 articles</span></h2>
+<div class="cards"><a class="card" href="docs/overview-architecture.html">
+<div class="f">FILE / 01 · (system) · — LN</div>
+<div class="t">MacSpaces — Architecture Overview <span class="badge spec">SPEC</span></div>
+<div class="d">MacSpaces is a native macOS utility that monitors disk usage and reclaims space, with purpose-built audits for local AI tooling: Ollama model stores and llama.c</div></a><a class="card" href="docs/overview-user-guide.html">
+<div class="f">FILE / 02 · (guide) · — LN</div>
+<div class="t">User Guide — Using MacSpaces Day to Day <span class="badge spec">SPEC</span></div>
+<div class="d">This guide walks through every screen of MacSpaces, explains what the audits actually measure, and covers the safety model for deletions. A standalone copy live</div></a></div></section><section id="cat-core" class="wrap" style="padding-bottom:2rem">
+<h2 class="sec">Core <span style="color:var(--fnt);text-transform:none;letter-spacing:.04em">&nbsp;// the meat · 15 articles</span></h2>
+<div class="cards"><a class="card" href="docs/models-swift.html">
+<div class="f">FILE / 01 · Sources/MacSpacesCore/Models/Models.swift · 347 LN</div>
+<div class="t">Sources/MacSpacesCore/Models/Models.swift <span class="badge core">CORE</span></div>
+<div class="d">The shared value-type vocabulary of the app. Every scanner output, every view rendering, and every test fixture is expressed in these types. The file is deliber</div></a><a class="card" href="docs/diskscanner-swift.html">
+<div class="f">FILE / 02 · Sources/MacSpacesCore/Scanners/DiskScanner.swift · 194 LN</div>
+<div class="t">Sources/MacSpacesCore/Scanners/DiskScanner.swift <span class="badge core">CORE</span></div>
+<div class="d">Parallel directory-tree sizer. scan() builds a full DiskNode tree from a root URL using a bounded pool of concurrent tasks, with live statistics and cancellatio</div></a><a class="card" href="docs/ollamaauditor-swift.html">
+<div class="f">FILE / 03 · Sources/MacSpacesCore/Scanners/OllamaAuditor.swift · 231 LN</div>
+<div class="t">Sources/MacSpacesCore/Scanners/OllamaAuditor.swift <span class="badge core">CORE</span></div>
+<div class="d">The orphan-detection engine. Audits a local Ollama installation by parsing every model manifest, cross-referencing every blob, and reporting orphans, per-model </div></a><a class="card" href="docs/llamaauditor-swift.html">
+<div class="f">FILE / 04 · Sources/MacSpacesCore/Scanners/LlamaAuditor.swift · 297 LN</div>
+<div class="t">Sources/MacSpacesCore/Scanners/LlamaAuditor.swift <span class="badge core">CORE</span></div>
+<div class="d">Finds llama.cpp installations (Homebrew and source builds) and every GGUF model store on the machine — llama.cpp&#x27;s download cache, the HuggingFace hub cache, an</div></a><a class="card" href="docs/appmodel-swift.html">
+<div class="f">FILE / 05 · Sources/MacSpacesCore/Services/AppModel.swift · 212 LN</div>
+<div class="t">Sources/MacSpacesCore/Services/AppModel.swift <span class="badge core">CORE</span></div>
+<div class="d">The single source of observable truth for the UI: a @MainActor ObservableObject holding the volume list, the disk tree, both audit results, scan progress, and d</div></a><a class="card" href="docs/trashservice-swift.html">
+<div class="f">FILE / 06 · Sources/MacSpacesCore/Services/TrashService.swift · 38 LN</div>
+<div class="t">Sources/MacSpacesCore/Services/TrashService.swift <span class="badge core">CORE</span></div>
+<div class="d">Every destructive operation in the app goes through this 38-line file — which is the point. One choke point for deletion means one place to audit the safety mod</div></a><a class="card" href="docs/volumemonitor-swift.html">
+<div class="f">FILE / 07 · Sources/MacSpacesCore/Services/VolumeMonitor.swift · 48 LN</div>
+<div class="t">Sources/MacSpacesCore/Services/VolumeMonitor.swift <span class="badge core">CORE</span></div>
+<div class="d">Keeps the Dashboard ring and menu bar label honest: polls every mounted volume&#x27;s capacity every 30 seconds and publishes VolumeInfo values. Small, but it is the</div></a><a class="card" href="docs/macspacesapp-swift.html">
+<div class="f">FILE / 08 · Sources/MacSpaces/MacSpacesApp.swift · 88 LN</div>
+<div class="t">Sources/MacSpaces/MacSpacesApp.swift <span class="badge core">CORE</span></div>
+<div class="d">The @main scene graph: a WindowGroup hosting ContentView, a Settings scene hosting SettingsView, and a MenuBarExtra showing live free space — all sharing one @S</div></a><a class="card" href="docs/components-swift.html">
+<div class="f">FILE / 09 · Sources/MacSpaces/Views/Components.swift · 141 LN</div>
+<div class="t">Sources/MacSpaces/Views/Components.swift <span class="badge core">CORE</span></div>
+<div class="d">The four reusable visual primitives every tab is built from: the usage ring, the stat card, the proportional size bar, and the status badge. Keeping them here i</div></a><a class="card" href="docs/contentview-swift.html">
+<div class="f">FILE / 10 · Sources/MacSpaces/Views/ContentView.swift · 79 LN</div>
+<div class="t">Sources/MacSpaces/Views/ContentView.swift <span class="badge core">CORE</span></div>
+<div class="d">The NavigationSplitView shell: a sidebar of four destinations (Dashboard, Disk Usage, Ollama, llama.cpp) with live badge counts, and a detail switch that render</div></a><a class="card" href="docs/dashboardview-swift.html">
+<div class="f">FILE / 11 · Sources/MacSpaces/Views/DashboardView.swift · 224 LN</div>
+<div class="t">Sources/MacSpaces/Views/DashboardView.swift <span class="badge core">CORE</span></div>
+<div class="d">The landing screen: storage summary ring, AI-audit summary cards with one-click audit runs, and the largest-folders chart once a scan exists. Its selection Bind</div></a><a class="card" href="docs/disktree-swift.html">
+<div class="f">FILE / 12 · Sources/MacSpaces/Views/DiskTreeView.swift · 312 LN</div>
+<div class="t">Sources/MacSpaces/Views/DiskTreeView.swift <span class="badge core">CORE</span></div>
+<div class="d">The whole-disk explorer: NavigationStack drill-down through the scanned tree, a top-150 largest-files mode, live scan progress with cancel, and per-node delete/</div></a><a class="card" href="docs/ollamaview-swift.html">
+<div class="f">FILE / 13 · Sources/MacSpaces/Views/OllamaView.swift · 325 LN</div>
+<div class="t">Sources/MacSpaces/Views/OllamaView.swift <span class="badge core">CORE</span></div>
+<div class="d">The Ollama audit screen: header stat cards, the orphaned-blob workbench with selection and cleanup, the model table with shared-layer badges, and the ~/.ollama </div></a><a class="card" href="docs/llamaview-swift.html">
+<div class="f">FILE / 14 · Sources/MacSpaces/Views/LlamaView.swift · 365 LN</div>
+<div class="t">Sources/MacSpaces/Views/LlamaView.swift <span class="badge core">CORE</span></div>
+<div class="d">The llama.cpp screen: install cards (Homebrew/source with versions and build-artifact sizes), the duplicate-GGUF workbench with one-click reclamation, and model</div></a><a class="card" href="docs/settingsview-swift.html">
+<div class="f">FILE / 15 · Sources/MacSpaces/Views/SettingsView.swift · 149 LN</div>
+<div class="t">Sources/MacSpaces/Views/SettingsView.swift <span class="badge core">CORE</span></div>
+<div class="d">The Settings scene: default delete behavior, custom GGUF folder management with a native folder picker, and source-scan-root editing. Everything persists to Use</div></a></div></section><section id="cat-tests" class="wrap" style="padding-bottom:2rem">
+<h2 class="sec">Tests <span style="color:var(--fnt);text-transform:none;letter-spacing:.04em">&nbsp;// verification · 1 articles</span></h2>
+<div class="cards"><a class="card" href="docs/runner-swift.html">
+<div class="f">FILE / 01 · Tests/MacSpacesTestRunner/Runner.swift · 292 LN</div>
+<div class="t">Tests/MacSpacesTestRunner/Runner.swift <span class="badge test">TEST</span></div>
+<div class="d">41 assertions across four suites, run by a hand-rolled harness that exits non-zero on failure. The harness exists because this machine&#x27;s Command Line Tools ship</div></a></div></section><section id="cat-meta" class="wrap" style="padding-bottom:2rem">
+<h2 class="sec">Meta <span style="color:var(--fnt);text-transform:none;letter-spacing:.04em">&nbsp;// repo plumbing · 4 articles</span></h2>
+<div class="cards"><a class="card" href="docs/package-swift.html">
+<div class="f">FILE / 01 · Package.swift · 27 LN</div>
+<div class="t">Package.swift <span class="badge ">META</span></div>
+<div class="d">Three targets, one dependency direction: MacSpacesCore (library) ← MacSpaces (app executable) and ← macspaces-tests (test executable). Platforms: macOS 13. Tool</div></a><a class="card" href="docs/build-app-sh.html">
+<div class="f">FILE / 02 · scripts/build-app.sh · 85 LN</div>
+<div class="t">scripts/build-app.sh <span class="badge ">META</span></div>
+<div class="d">Turns the SwiftPM build into a double-clickable .app: release build → Contents/{MacOS,Resources} assembly → Info.plist → generated icon → ad-hoc signature. Enco</div></a><a class="card" href="docs/make-icon-swift.html">
+<div class="f">FILE / 03 · scripts/make-icon.swift · 115 LN</div>
+<div class="t">scripts/make-icon.swift <span class="badge ">META</span></div>
+<div class="d">Generates AppIcon.icns at build time with zero assets in the repo: a Swift script draws the icon with CoreGraphics — blue→teal gradient rounded square, white us</div></a><a class="card" href="docs/readme-md.html">
+<div class="f">FILE / 04 · README.md · 78 LN</div>
+<div class="t">README.md <span class="badge ">META</span></div>
+<div class="d">The repository front door: what the app does, the safety model, build/run instructions, permissions guidance, and the Ollama custom-path caveat. Points at this </div></a></div></section>
+<footer class="bottom"><div class="wrap foot">
+<span><b>NODE 001 / ACTIVE</b></span>
+<span>GENERATED 2026-09-25 00:35 UTC</span>
+</div></footer>
+<script>
+document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){
+ document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('on',x===t)});
+ document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('on',p.id==='p-'+t.dataset.tab)});
+ window.scrollTo({top:0});
+});});
+</script>
+</body></html>

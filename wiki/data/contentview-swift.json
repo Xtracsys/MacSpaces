@@ -1,0 +1,85 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "ff95b6983b99bf381fee81de3db73eef",
+  "type": "doc",
+  "slug": "contentview-swift",
+  "title": "Sources/MacSpaces/Views/ContentView.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "core",
+    "CORE",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_d37abdb409",
+      "type": "heading",
+      "content": "Sources/MacSpaces/Views/ContentView.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_01158e4053",
+      "type": "paragraph",
+      "content": "The NavigationSplitView shell: a sidebar of four destinations (Dashboard, Disk Usage, Ollama, llama.cpp) with live badge counts, and a detail switch that renders the selected view."
+    },
+    {
+      "id": "blk_93522ed4be",
+      "type": "heading",
+      "content": "Sidebar pattern",
+      "level": 2
+    },
+    {
+      "id": "blk_8b00fbb8f3",
+      "type": "paragraph",
+      "content": "Rows are Label + .tag(item) against List(selection: $selection) \u2014 the plain selection-binding pattern. An earlier draft used NavigationLink(value:), but with the detail rendered by a switch (rather than navigationDestination(for:)) the links had no matching destination; tags make row clicks set selection directly. badgeCount feeds Int badges: orphaned-blob count on the Ollama row, duplicate-group count on the llama.cpp row, zero renders no badge."
+    },
+    {
+      "id": "blk_6a5fd3aad6",
+      "type": "paragraph",
+      "content": "A safeAreaInset(edge: .bottom) strip shows model.lastDeletionSummary \u2014 the persistent 'Moved to Trash 3 items.' feedback line \u2014 so every view gets deletion feedback without duplicating it."
+    },
+    {
+      "id": "blk_64d9874f08",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_a48a505d5b",
+      "type": "field",
+      "content": "dashboard / disk / ollama / llama with title + systemImage",
+      "meta": {
+        "name": "enum SidebarItem"
+      }
+    },
+    {
+      "id": "blk_9bedcb21c1",
+      "type": "field",
+      "content": "Orphan and duplicate-group badges from the current audits",
+      "meta": {
+        "name": "badgeCount(for:)"
+      }
+    }
+  ],
+  "properties": {
+    "category": "core",
+    "path": "Sources/MacSpaces/Views/ContentView.swift",
+    "lines": 79,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "CORE",
+    "spec_refs": [],
+    "related": [
+      "dashboardview-swift",
+      "disktree-swift",
+      "ollamaview-swift",
+      "llamaview-swift",
+      "appmodel-swift"
+    ]
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

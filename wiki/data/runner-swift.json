@@ -1,0 +1,123 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "8930beada01a683c69c374ed098c7769",
+  "type": "doc",
+  "slug": "runner-swift",
+  "title": "Tests/MacSpacesTestRunner/Runner.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "tests",
+    "TEST",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_25ce9f771c",
+      "type": "heading",
+      "content": "Tests/MacSpacesTestRunner/Runner.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_0f4c710a29",
+      "type": "paragraph",
+      "content": "41 assertions across four suites, run by a hand-rolled harness that exits non-zero on failure. The harness exists because this machine's Command Line Tools ship neither the macOS XCTest framework (swift test fails with 'unable to resolve module dependency: XCTest') nor the Swift Testing macro plugin \u2014 the same toolchain gap that forced the 26.5 SDK fallback for SwiftUI macros."
+    },
+    {
+      "id": "blk_329e251663",
+      "type": "heading",
+      "content": "Harness",
+      "level": 2
+    },
+    {
+      "id": "blk_c8002e41c6",
+      "type": "paragraph",
+      "content": "TestRecorder collects per-assertion failures with file/line and counts passes; expectEqual is a thin Equatable wrapper that prints both values in the failure line. @main TestMain runs the suites, prints 'Passed assertions: N' and 'ALL TESTS PASSED' or the numbered failure list, and exits 1 on any failure. Run with: swift run --scratch-path .build/tests macspaces-tests (the separate scratch path lets tests build under the default SDK while the SwiftUI app builds under 26.5)."
+    },
+    {
+      "id": "blk_0d7075d140",
+      "type": "paragraph",
+      "content": "The test target depends only on MacSpacesCore and uses @testable import MacSpacesCore \u2014 legal because SwiftPM passes -enable-testing in debug builds. A plain import compiles but makes every internal Core type invisible, which produced a very confusing 'cannot find DiskNode' phase during bring-up."
+    },
+    {
+      "id": "blk_bfc1cff7b7",
+      "type": "heading",
+      "content": "OllamaAuditTests \u2014 the orphan engine",
+      "level": 2
+    },
+    {
+      "id": "blk_7d196a6d6a",
+      "type": "paragraph",
+      "content": "Fixtures build a temp ~/.ollama with makeBlob (sizes in multiples of 4096 so APFS allocated size equals written size \u2014 the first run's 1000-byte blobs reported 4096 and broke every size assertion) and makeManifest writing real manifest JSON with config/layers digests."
+    },
+    {
+      "id": "blk_2dda687909",
+      "type": "paragraph",
+      "content": "orphanDetectionAndSharedLayers is the core case: two manifests sharing one layer, one orphan blob. Asserts the orphan set and byte total, shared detection, model A's total (4096 + 4096 + 8192 = 16384), its unique size (12288), shared count (1), and model B's unique size of 0. This is the test that caught the sharedBlobDigests-before-population ordering bug. missingBlobsReported covers phantom digests; blobsUniqueToModel proves a shared layer is excluded from model deletion; processDetection writes our own pid to ollama.pid (must report running) and 'not-a-pid' (must not). Each test gets a fresh temp root \u2014 an early version shared one root and accumulated manifests across tests."
+    },
+    {
+      "id": "blk_77fdd3477c",
+      "type": "paragraph",
+      "content": "Path comparisons resolve symlinks on both sides: FileManager.temporaryDirectory hands out /var/folders/... while enumerators return the resolved /private/var/folders/..., so raw URL equality silently failed. resolvingSymlinks via URL handles this."
+    },
+    {
+      "id": "blk_b0a901ba52",
+      "type": "heading",
+      "content": "LlamaAuditTests and DiskTreeTests",
+      "level": 2
+    },
+    {
+      "id": "blk_bb340b784f",
+      "type": "paragraph",
+      "content": "LlamaAuditTests: prettyModelName (models--org--name \u2192 org/name), tilde expansion, duplicate detection (two identical payloads + one different file \u2192 exactly one group of two excluding the different file), and a custom-folder end-to-end audit. DiskTreeTests: removing() splices a file out of a two-level tree and shrinks both ancestor totals (asserts 100 remaining after removing a 500-byte file from a 600-byte tree \u2014 an early draft of the fixture put the file at the wrong path and the test accidentally passed with the broken implementation), largestFiles ordering, and all five shouldSkip rules including the root-prefix-only-at-'/' case."
+    },
+    {
+      "id": "blk_4957673c73",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_99eb8d34b1",
+      "type": "field",
+      "content": "Macro-free assertions with file:line failure reporting",
+      "meta": {
+        "name": "TestRecorder / expectEqual"
+      }
+    },
+    {
+      "id": "blk_9c8aef60c3",
+      "type": "field",
+      "content": "Fresh fixture root per test, cleaned up in defer",
+      "meta": {
+        "name": "withTempRoot(_ body:)"
+      }
+    },
+    {
+      "id": "blk_cd49b4f0c6",
+      "type": "field",
+      "content": "How to run the suite",
+      "meta": {
+        "name": "swift run --scratch-path .build/tests macspaces-tests"
+      }
+    }
+  ],
+  "properties": {
+    "category": "tests",
+    "path": "Tests/MacSpacesTestRunner/Runner.swift",
+    "lines": 292,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "TEST",
+    "spec_refs": [],
+    "related": [
+      "ollamaauditor-swift",
+      "llamaauditor-swift",
+      "models-swift"
+    ]
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

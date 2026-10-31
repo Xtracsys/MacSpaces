@@ -1,0 +1,110 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "83d66c7cbaa16f615123109101958a2b",
+  "type": "doc",
+  "slug": "disktree-swift",
+  "title": "Sources/MacSpaces/Views/DiskTreeView.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "core",
+    "CORE",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_717fb17729",
+      "type": "heading",
+      "content": "Sources/MacSpaces/Views/DiskTreeView.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_b22b36ca0e",
+      "type": "paragraph",
+      "content": "The whole-disk explorer: NavigationStack drill-down through the scanned tree, a top-150 largest-files mode, live scan progress with cancel, and per-node delete/reveal. It is the only view that owns its own NavigationStack."
+    },
+    {
+      "id": "blk_1afe42576a",
+      "type": "heading",
+      "content": "Scan lifecycle UI",
+      "level": 2
+    },
+    {
+      "id": "blk_aa0d780979",
+      "type": "paragraph",
+      "content": "Three states: scanning (large spinner, root path, current-path ticker truncated to the middle, live item/byte counters from AppModel's 250 ms sampling), empty state with a prominent 'Scan Home Folder' button, and results. The toolbar hosts a segmented Folder Tree / Largest Files picker, a Rescan menu (Home or Entire Disk \u2014 the latter behind a confirmation dialog warning about duration and permission-limited folders), and a Cancel button while scanning."
+    },
+    {
+      "id": "blk_17b5b08565",
+      "type": "heading",
+      "content": "Drill-down and deletion",
+      "level": 2
+    },
+    {
+      "id": "blk_2ad7d9e2bd",
+      "type": "paragraph",
+      "content": "The tree renders the current node's summary row (full path, bytes, item count, text-selectable) plus children sorted by size; directories are NavigationLinks pushing DiskNode values via navigationDestination, files are plain rows. A Back row mirrors the stack pop. Rows carry context menus: Reveal in Finder, Move to Trash\u2026."
+    },
+    {
+      "id": "blk_9385287e8b",
+      "type": "paragraph",
+      "content": "Deletion confirmation is centralized in onDeleteConfirmation(target:model:), a ViewModifier hosting a confirmationDialog that respects the app delete mode \u2014 under permanent mode it offers both 'Delete Permanently' and a 'Move to Trash Instead' escape hatch, and the message spells out the byte total and irreversibility. On confirm it calls AppModel.deleteDiskNode, which deletes on disk and shrinks ancestor totals in the in-memory tree instantly."
+    },
+    {
+      "id": "blk_5023508029",
+      "type": "paragraph",
+      "content": "Largest Files flattens the tree via DiskNode.largestFiles(limit: 150) and renders name, truncated full path, a SizeBar proportional to the largest entry, and monospaced byte counts \u2014 same context menus, same confirmation flow."
+    },
+    {
+      "id": "blk_4b2e2b491f",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_a45204f951",
+      "type": "field",
+      "content": ".home (fast) vs .fileSystemRoot (full scan, confirmed first)",
+      "meta": {
+        "name": "enum ScanTarget"
+      }
+    },
+    {
+      "id": "blk_3d43eb81b9",
+      "type": "field",
+      "content": "Shared delete dialog honoring DeletionMode",
+      "meta": {
+        "name": "onDeleteConfirmation(target:model:)"
+      }
+    },
+    {
+      "id": "blk_6d89a7343c",
+      "type": "field",
+      "content": "Top-150 files with proportional bars",
+      "meta": {
+        "name": "largestFilesList(root:)"
+      }
+    }
+  ],
+  "properties": {
+    "category": "core",
+    "path": "Sources/MacSpaces/Views/DiskTreeView.swift",
+    "lines": 312,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "CORE",
+    "spec_refs": [
+      "README.md"
+    ],
+    "related": [
+      "diskscanner-swift",
+      "appmodel-swift",
+      "trashservice-swift"
+    ],
+    "tested_by": "macspaces-tests"
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "8e2b94e46c29e8ec306ea10f9483bc06",
+  "type": "doc",
+  "slug": "readme-md",
+  "title": "README.md",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "meta",
+    "META",
+    "Markdown"
+  ],
+  "blocks": [
+    {
+      "id": "blk_68eb613230",
+      "type": "heading",
+      "content": "README.md",
+      "level": 1
+    },
+    {
+      "id": "blk_7e9fbc2967",
+      "type": "paragraph",
+      "content": "The repository front door: what the app does, the safety model, build/run instructions, permissions guidance, and the Ollama custom-path caveat. Points at this wiki and USER_GUIDE.md for the full walkthrough."
+    },
+    {
+      "id": "blk_5926ce9a70",
+      "type": "heading",
+      "content": "Coverage",
+      "level": 2
+    },
+    {
+      "id": "blk_09196bcf0e",
+      "type": "paragraph",
+      "content": "Summarizes the three feature pillars (Ollama orphan audits, llama.cpp/GGUF management with dedupe, parallel disk scanning), the Trash-by-default safety model with the shared-layer guarantee, the CLT-only build path (scripts/build-app.sh, swift run for tests), Full Disk Access guidance for full scans, and the OLLAMA_MODELS limitation: the app reads ~/.ollama only, because a Finder-launched app does not inherit your shell's environment."
+    },
+    {
+      "id": "blk_6888d3cf44",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_e62672a587",
+      "type": "field",
+      "content": "Build and test entry points",
+      "meta": {
+        "name": "swift build / swift run --scratch-path .build/tests macspaces-tests"
+      }
+    },
+    {
+      "id": "blk_65c34b1912",
+      "type": "field",
+      "content": "One-command bundle + install",
+      "meta": {
+        "name": "./scripts/build-app.sh --install"
+      }
+    }
+  ],
+  "properties": {
+    "category": "meta",
+    "path": "README.md",
+    "lines": 78,
+    "lang": "Markdown",
+    "phase": "v1.0",
+    "status": "META",
+    "spec_refs": [],
+    "related": [
+      "overview-user-guide",
+      "overview-architecture"
+    ]
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

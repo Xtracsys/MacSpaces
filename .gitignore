@@ -1,0 +1,17 @@
+# Build artifacts
+.build/
+build/
+*.dmg
+
+# macOS noise
+.DS_Store
+._*
+
+# Editors
+*.swp
+.idea/
+.vscode/
+
+# SwiftPM
+*.xcodeproj
+Package.resolved

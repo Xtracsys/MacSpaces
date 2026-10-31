@@ -1,0 +1,146 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "4c79aa36fbfc14e82a4205d831a522b9",
+  "type": "doc",
+  "slug": "overview-architecture",
+  "title": "MacSpaces \u2014 Architecture Overview",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "overview",
+    "SPEC",
+    "SwiftUI / Swift 5.9"
+  ],
+  "blocks": [
+    {
+      "id": "blk_7103cfa072",
+      "type": "heading",
+      "content": "MacSpaces \u2014 Architecture Overview",
+      "level": 1
+    },
+    {
+      "id": "blk_8b8a23f8fa",
+      "type": "paragraph",
+      "content": "MacSpaces is a native macOS utility that monitors disk usage and reclaims space, with purpose-built audits for local AI tooling: Ollama model stores and llama.cpp installs/models. It ships as a single ad-hoc-signed .app bundle built entirely with SwiftPM \u2014 no Xcode project, no external dependencies, no sandbox."
+    },
+    {
+      "id": "blk_be5ace1066",
+      "type": "paragraph",
+      "content": "The codebase is split into two SwiftPM targets with a strict dependency direction. MacSpacesCore holds everything that thinks: value types, three scanners, and three services \u2014 no SwiftUI, linkable by both the app and the macro-free test runner. The MacSpaces app target holds everything that draws: the @main scene, a menu bar extra, and seven SwiftUI views. Views observe AppModel (an ObservableObject injected via .environmentObject) and never touch the filesystem directly; every mutation flows through AppModel, which delegates to Core services and re-runs the relevant audit afterward."
+    },
+    {
+      "id": "blk_37e91bf1c9",
+      "type": "heading",
+      "content": "Data flow",
+      "level": 2
+    },
+    {
+      "id": "blk_cb500f885d",
+      "type": "paragraph",
+      "content": "Views call AppModel methods (scanDisk, runOllamaAudit, runLlamaAudit, delete*). AppModel runs blocking filesystem work on Task.detached(priority: .userInitiated) so the MainActor never stalls, then hops back to publish results. Long scans stream progress into a ScanStats actor that a dedicated sampling task reads every 250 ms and republishes as a ScanProgress value, giving live item/byte counters without locks on the UI path."
+    },
+    {
+      "id": "blk_02daa924e3",
+      "type": "paragraph",
+      "content": "Deletion is centralized in TrashService: Trash by default, permanent deletion behind a DeletionMode stored in UserDefaults. After any delete, AppModel refreshes the affected audit (RefreshTarget OptionSet: .ollama, .llama, .disk) so counts and reclaimable-size numbers never go stale on screen."
+    },
+    {
+      "id": "blk_0522a11201",
+      "type": "heading",
+      "content": "Why a two-target split",
+      "level": 2
+    },
+    {
+      "id": "blk_14db9bb3c5",
+      "type": "paragraph",
+      "content": "The original single-target layout broke on this machine's toolchain: the Command Line Tools 27.0 SDK ships a macro-based SwiftUI but omits the SwiftUIMacros plugin, and macOS 26.5 SDK's SwiftUICore.tbd refuses to link into non-app executables, which made a test target that linked the app module impossible. Splitting Core out gave the test runner a SwiftUI-free module to link against. The toolchain quirks are documented in build-app.sh, which auto-detects the missing plugin and falls back to the 26.5 SDK."
+    },
+    {
+      "id": "blk_ea7dd0eab3",
+      "type": "paragraph",
+      "content": "The split also forced a real public API: Models.swift and the services expose public declarations, scanners stay internal (audits run inside Core; views only see results). The test runner uses @testable import MacSpacesCore, which works in debug builds because SwiftPM passes -enable-testing there \u2014 release builds must build only the app product, which scripts/build-app.sh enforces with --product MacSpaces."
+    },
+    {
+      "id": "blk_8a20e981df",
+      "type": "heading",
+      "content": "Safety model",
+      "level": 2
+    },
+    {
+      "id": "blk_819cc31d3c",
+      "type": "paragraph",
+      "content": "Every destructive action funnels through TrashService with an explicit DeletionMode. Trash is the default everywhere; permanent deletion is opt-in in Settings and every dialog spells out the byte count and consequence. Ollama orphan cleanup is hard-wired to .trash regardless of the setting. Deleting a single Ollama model uses OllamaAuditor.blobsUniqueTo to remove only the manifest plus blobs referenced by no other manifest \u2014 shared layers are never destroyed. The app reads ~/.ollama/ollama.pid and probes it with kill(pid, 0), showing a Running badge so users know blob deletions take effect after the server restarts."
+    },
+    {
+      "id": "blk_5e157f7d35",
+      "type": "heading",
+      "content": "Scan discipline",
+      "level": 2
+    },
+    {
+      "id": "blk_529103819c",
+      "type": "paragraph",
+      "content": "The whole-disk scanner skips /System/Volumes (APFS firmlinks would double-count user data), /dev, /private/var/vm, /Volumes and kernel noise anywhere, and skips symlink entries entirely (never counts a target twice). Sizes prefer totalFileAllocatedSize (what Finder shows) over logical file size. Permission-denied directories become nodes with accessDenied=true \u2014 rendered as a lock icon \u2014 instead of failing the scan."
+    },
+    {
+      "id": "blk_18e3f6f97a",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_307ee19edd",
+      "type": "field",
+      "content": "Models, DiskScanner, OllamaAuditor, LlamaAuditor, AppModel, TrashService, VolumeMonitor \u2014 no SwiftUI",
+      "meta": {
+        "name": "MacSpacesCore (library target)"
+      }
+    },
+    {
+      "id": "blk_60ebac226f",
+      "type": "field",
+      "content": "@main scene, MenuBarExtra, seven views under Sources/MacSpaces/Views",
+      "meta": {
+        "name": "MacSpaces (executable target)"
+      }
+    },
+    {
+      "id": "blk_3f3ee0b43e",
+      "type": "field",
+      "content": "Macro-free test harness; 41 assertions; links Core only",
+      "meta": {
+        "name": "macspaces-tests (executable target)"
+      }
+    },
+    {
+      "id": "blk_bc7c2f76f2",
+      "type": "field",
+      "content": "swift build \u2192 .app bundle with Info.plist, generated icon, ad-hoc signature",
+      "meta": {
+        "name": "scripts/build-app.sh"
+      }
+    }
+  ],
+  "properties": {
+    "category": "overview",
+    "path": "(system)",
+    "lines": 0,
+    "lang": "SwiftUI / Swift 5.9",
+    "phase": "v1.0",
+    "status": "SPEC",
+    "spec_refs": [
+      "README.md"
+    ],
+    "related": [
+      "overview-user-guide",
+      "models-swift",
+      "diskscanner-swift",
+      "appmodel-swift"
+    ],
+    "tested_by": "macspaces-tests"
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

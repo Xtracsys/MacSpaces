@@ -1,0 +1,84 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "0dbd0140574e0a4b5e4235a5036b641d",
+  "type": "doc",
+  "slug": "volumemonitor-swift",
+  "title": "Sources/MacSpacesCore/Services/VolumeMonitor.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "core",
+    "CORE",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_ac85f6c36a",
+      "type": "heading",
+      "content": "Sources/MacSpacesCore/Services/VolumeMonitor.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_653ae3e328",
+      "type": "paragraph",
+      "content": "Keeps the Dashboard ring and menu bar label honest: polls every mounted volume's capacity every 30 seconds and publishes VolumeInfo values. Small, but it is the 'monitoring' in the app's title."
+    },
+    {
+      "id": "blk_73f77309e8",
+      "type": "heading",
+      "content": "Details",
+      "level": 2
+    },
+    {
+      "id": "blk_333536d5c1",
+      "type": "paragraph",
+      "content": "refresh() reads mountedVolumeURLs(options: .skipHiddenVolumes) and, per volume, volumeTotalCapacity plus volumeAvailableCapacityForImportantUsage \u2014 the same 'free space' number Finder reports, which accounts for purgeable space. Volumes with zero/unknown capacity are dropped. Sorting pins the root volume ('/'), i.e. Macintosh HD, first and orders the rest by name; primaryVolume is the first entry and drives the Dashboard ring and the menu bar percentage."
+    },
+    {
+      "id": "blk_290822a236",
+      "type": "paragraph",
+      "content": "The poll is a plain Timer.scheduledTimer firing on the main run loop, marshalled into the MainActor with Task { @MainActor in }. deinit invalidates the timer. VolumeInfo.usedFraction guards division by zero for volumes reporting zero capacity."
+    },
+    {
+      "id": "blk_33ef13dad5",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_1228a67ea6",
+      "type": "field",
+      "content": "Starts the refresh timer immediately",
+      "meta": {
+        "name": "public init(pollInterval: TimeInterval = 30)"
+      }
+    },
+    {
+      "id": "blk_34abde150c",
+      "type": "field",
+      "content": "Manual re-poll (also used on window activation paths)",
+      "meta": {
+        "name": "public func refresh()"
+      }
+    }
+  ],
+  "properties": {
+    "category": "core",
+    "path": "Sources/MacSpacesCore/Services/VolumeMonitor.swift",
+    "lines": 48,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "CORE",
+    "spec_refs": [
+      "README.md"
+    ],
+    "related": [
+      "appmodel-swift",
+      "macspacesapp-swift"
+    ]
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

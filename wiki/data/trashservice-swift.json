@@ -1,0 +1,92 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "70e296a59eb67074ad8b2c0641dc611f",
+  "type": "doc",
+  "slug": "trashservice-swift",
+  "title": "Sources/MacSpacesCore/Services/TrashService.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "core",
+    "CORE",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_ac739a0d96",
+      "type": "heading",
+      "content": "Sources/MacSpacesCore/Services/TrashService.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_a822231761",
+      "type": "paragraph",
+      "content": "Every destructive operation in the app goes through this 38-line file \u2014 which is the point. One choke point for deletion means one place to audit the safety model: Trash by default, permanent deletion behind an explicit mode, Finder reveal for verification."
+    },
+    {
+      "id": "blk_c87dcaffe0",
+      "type": "heading",
+      "content": "Design",
+      "level": 2
+    },
+    {
+      "id": "blk_661350aaed",
+      "type": "paragraph",
+      "content": "deleteMode is backed by UserDefaults key deleteMode and exposed as a static @MainActor property so Settings and AppModel always agree. delete(_ urls:mode:) maps deleteOne over a batch; deleteOne uses FileManager.trashItem for .trash and removeItem for .permanent, returning a DeleteOutcome per URL (success flag + localized error message) so batch reports can say 'Moved 5, failed 1: \u2026' instead of failing silently."
+    },
+    {
+      "id": "blk_6dff62ccc2",
+      "type": "paragraph",
+      "content": "revealInFinder uses NSWorkspace.activateFileViewerSelecting \u2014 used by every view's context menus and by the orphan list so users can verify before deleting. The app is non-sandboxed (SwiftPM ad-hoc build), which is what makes full-disk trashItem calls possible without entitlement prompts."
+    },
+    {
+      "id": "blk_8852e76ffa",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_1082953351",
+      "type": "field",
+      "content": "UserDefaults-backed trash/permanent default",
+      "meta": {
+        "name": "public static var deleteMode: DeletionMode"
+      }
+    },
+    {
+      "id": "blk_ca3ca22cbc",
+      "type": "field",
+      "content": "Batch delete with per-file outcomes",
+      "meta": {
+        "name": "public static func delete(_:mode:) -> [DeleteOutcome]"
+      }
+    },
+    {
+      "id": "blk_fb46087756",
+      "type": "field",
+      "content": "NSWorkspace file viewer selection",
+      "meta": {
+        "name": "public static func revealInFinder(_:)"
+      }
+    }
+  ],
+  "properties": {
+    "category": "core",
+    "path": "Sources/MacSpacesCore/Services/TrashService.swift",
+    "lines": 38,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "CORE",
+    "spec_refs": [
+      "README.md"
+    ],
+    "related": [
+      "appmodel-swift",
+      "models-swift"
+    ]
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}

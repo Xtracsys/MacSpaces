@@ -1,0 +1,145 @@
+{
+  "$schema": "https://code-wiki.local/schema/article.json",
+  "id": "1d070badf8b3c2830d1df6d7f9039c72",
+  "type": "doc",
+  "slug": "models-swift",
+  "title": "Sources/MacSpacesCore/Models/Models.swift",
+  "version": 1,
+  "updated": "2026-09-25T00:35:17Z",
+  "tags": [
+    "core",
+    "CORE",
+    "Swift"
+  ],
+  "blocks": [
+    {
+      "id": "blk_a3ec404d46",
+      "type": "heading",
+      "content": "Sources/MacSpacesCore/Models/Models.swift",
+      "level": 1
+    },
+    {
+      "id": "blk_7f9efca0ce",
+      "type": "paragraph",
+      "content": "The shared value-type vocabulary of the app. Every scanner output, every view rendering, and every test fixture is expressed in these types. The file is deliberately dependency-free (Foundation only) so MacSpacesCore can be linked by consumers that cannot \u2014 or may not \u2014 pull in SwiftUI."
+    },
+    {
+      "id": "blk_907353c41b",
+      "type": "paragraph",
+      "content": "Everything here is public with explicit public initializers: the app target consumes these types across the module boundary, and release builds do not pass -enable-testing, so internal members would be invisible to the app. Scanners stay internal; only this vocabulary and the services are part of Core's real API surface."
+    },
+    {
+      "id": "blk_01367a943f",
+      "type": "heading",
+      "content": "DiskNode \u2014 the scan tree",
+      "level": 2
+    },
+    {
+      "id": "blk_d6fdeff396",
+      "type": "paragraph",
+      "content": "A recursive value type: path, name, isDirectory, ownBytes (files directly inside), totalBytes (inclusive), itemCount, children, accessDenied. Children are stored pre-sorted by totalBytes descending so views never re-sort. Hashable is implemented on path alone \u2014 identity is location, which also makes DiskNode usable as a NavigationStack value."
+    },
+    {
+      "id": "blk_5444aedd98",
+      "type": "paragraph",
+      "content": "removing(path:) is the surgical delete primitive used after trashing a file: it returns a copy of the tree with the node spliced out, subtracting the removed subtree's bytes and item count from every ancestor via prefix matching (path.hasPrefix(child.path + \"/\")). It clamps to max(ownBytes, \u2026) so totals can never go negative. largestFiles(limit:) does an iterative stack walk collecting files and returns the size-sorted prefix \u2014 powers the Top-150 view without recursion-depth concerns."
+    },
+    {
+      "id": "blk_a05e2a0b53",
+      "type": "heading",
+      "content": "Ollama value types",
+      "level": 2
+    },
+    {
+      "id": "blk_75b2ba24ca",
+      "type": "paragraph",
+      "content": "BlobInfo mirrors one file in blobs/: digest (sha256:<hex>), url, size. OllamaModelInfo mirrors one manifest: registry/namespace/name/tag parsed from the path layout manifests/<registry>/<ns>/<name>/<tag>, plus totalSize (sum of referenced blob sizes), uniqueSize (blobs referenced by exactly one manifest \u2014 this one), sharedLayerCount, missingBlobDigests (integrity reporting), and layerDigests kept for deletion math. qualifiedName renders registry[/ns/]name:tag."
+    },
+    {
+      "id": "blk_2b52c8b409",
+      "type": "paragraph",
+      "content": "OllamaAudit is the aggregate returned by OllamaAuditor.audit(): models, allBlobs, orphanedBlobs, sharedBlobDigests, modelsRootSize, footprint (top-level ~/.ollama entries), ollamaRunning, warnings. orphanedBytes and modelsBytes are computed properties."
+    },
+    {
+      "id": "blk_9529334735",
+      "type": "heading",
+      "content": "llama.cpp value types",
+      "level": 2
+    },
+    {
+      "id": "blk_5436e1a45f",
+      "type": "paragraph",
+      "content": "LlamaInstall describes either a Homebrew Cellar package or a source checkout (kind, version, totalBytes, buildBytes, executables). ModelDirInfo groups models by ModelSource (.llamaCache, .huggingFace, .customFolder) with the GGUF files found inside. GGUFFile carries a fingerprint string used for duplicate detection. LlamaAudit aggregates installs, modelDirs, duplicateGroups, and duplicateReclaimableBytes (keep-first accounting: every group contributes all but its first member's size)."
+    },
+    {
+      "id": "blk_bcef428ef4",
+      "type": "heading",
+      "content": "Formatting and deletion modes",
+      "level": 2
+    },
+    {
+      "id": "blk_dabd9daa04",
+      "type": "paragraph",
+      "content": "Format wraps ByteCountFormatter (countStyle .file) and owns the digest \u2194 blob-filename mapping: sha256:<hex> \u2194 sha256-<hex> via colon/dash replacement. DeletionMode is a String-raw enum (trash, permanent) stored directly in UserDefaults; DeleteOutcome reports per-URL success for batch operations. ScanProgress is the published snapshot of scan state (phase, currentItem, scannedItems, scannedBytes)."
+    },
+    {
+      "id": "blk_9120c95091",
+      "type": "heading",
+      "content": "Key items",
+      "level": 2
+    },
+    {
+      "id": "blk_fd56ab9c8b",
+      "type": "field",
+      "content": "Splice a node out of the tree, shrinking ancestor totals by prefix match",
+      "meta": {
+        "name": "DiskNode.removing(path:) -> DiskNode"
+      }
+    },
+    {
+      "id": "blk_983e0c7483",
+      "type": "field",
+      "content": "Iterative walk; files sorted by totalBytes descending",
+      "meta": {
+        "name": "DiskNode.largestFiles(limit:) -> [DiskNode]"
+      }
+    },
+    {
+      "id": "blk_b845967244",
+      "type": "field",
+      "content": "sha256: \u2194 sha256- round trip for Ollama's content-addressed store",
+      "meta": {
+        "name": "Format.blobFileName(forDigest:) / .digest(forBlobFileName:)"
+      }
+    },
+    {
+      "id": "blk_1fcc244b15",
+      "type": "field",
+      "content": "Sum of all-but-first member of each duplicate GGUF group",
+      "meta": {
+        "name": "LlamaAudit.duplicateReclaimableBytes"
+      }
+    }
+  ],
+  "properties": {
+    "category": "core",
+    "path": "Sources/MacSpacesCore/Models/Models.swift",
+    "lines": 347,
+    "lang": "Swift",
+    "phase": "v1.0",
+    "status": "CORE",
+    "spec_refs": [
+      "README.md"
+    ],
+    "related": [
+      "diskscanner-swift",
+      "ollamaauditor-swift",
+      "llamaauditor-swift"
+    ],
+    "tested_by": "macspaces-tests"
+  },
+  "audit": {
+    "last_editor": "human:wiki-generator",
+    "last_commit": "unknown"
+  }
+}
