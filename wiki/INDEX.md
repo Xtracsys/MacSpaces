@@ -1,6 +1,6 @@
 # MacSpaces Reference — Wiki Index
 
-> Generated 2026-10-30 22:57 UTC · 30 articles · data: `wiki_data.json`
+> Generated 2026-10-31 15:16 UTC · 32 articles · data: `wiki_data.json`
 
 
 ## How to edit this wiki
@@ -34,22 +34,24 @@
 | 04 | LlamaAuditor.swift | `Sources/MacSpacesCore/Scanners/LlamaAuditor.swift` | 336 | CORE |
 | 05 | GGUFMeta.swift | `Sources/MacSpacesCore/Scanners/GGUFMeta.swift` | 201 | CORE |
 | 06 | XcodeCachesAuditor.swift | `Sources/MacSpacesCore/Scanners/XcodeCachesAuditor.swift` | 77 | CORE |
-| 07 | AppModel.swift | `Sources/MacSpacesCore/Services/AppModel.swift` | 335 | CORE |
-| 08 | IgnoreRules.swift | `Sources/MacSpacesCore/Services/IgnoreRules.swift` | 110 | CORE |
-| 09 | WatchService.swift | `Sources/MacSpacesCore/Services/WatchService.swift` | 73 | CORE |
-| 10 | ScheduledAudit.swift | `Sources/MacSpacesCore/Services/ScheduledAudit.swift` | 184 | CORE |
-| 11 | TMSnapshots.swift | `Sources/MacSpacesCore/Services/TMSnapshots.swift` | 68 | CORE |
-| 12 | TrashService.swift | `Sources/MacSpacesCore/Services/TrashService.swift` | 38 | CORE |
-| 13 | VolumeMonitor.swift | `Sources/MacSpacesCore/Services/VolumeMonitor.swift` | 49 | CORE |
-| 14 | MacSpacesApp.swift | `Sources/MacSpaces/MacSpacesApp.swift` | 124 | CORE |
-| 15 | Components.swift | `Sources/MacSpaces/Views/Components.swift` | 141 | CORE |
-| 16 | ContentView.swift | `Sources/MacSpaces/Views/ContentView.swift` | 89 | CORE |
-| 17 | DashboardView.swift | `Sources/MacSpaces/Views/DashboardView.swift` | 283 | CORE |
-| 18 | DiskTreeView.swift | `Sources/MacSpaces/Views/DiskTreeView.swift` | 311 | CORE |
-| 19 | OllamaView.swift | `Sources/MacSpaces/Views/OllamaView.swift` | 381 | CORE |
-| 20 | LlamaView.swift | `Sources/MacSpaces/Views/LlamaView.swift` | 379 | CORE |
-| 21 | CachesView.swift | `Sources/MacSpaces/Views/CachesView.swift` | 261 | CORE |
-| 22 | SettingsView.swift | `Sources/MacSpaces/Views/SettingsView.swift` | 266 | CORE |
+| 07 | SpaceMapLayout.swift | `Sources/MacSpacesCore/Models/SpaceMapLayout.swift` | 228 | CORE |
+| 08 | AppModel.swift | `Sources/MacSpacesCore/Services/AppModel.swift` | 335 | CORE |
+| 09 | IgnoreRules.swift | `Sources/MacSpacesCore/Services/IgnoreRules.swift` | 110 | CORE |
+| 10 | WatchService.swift | `Sources/MacSpacesCore/Services/WatchService.swift` | 73 | CORE |
+| 11 | ScheduledAudit.swift | `Sources/MacSpacesCore/Services/ScheduledAudit.swift` | 184 | CORE |
+| 12 | TMSnapshots.swift | `Sources/MacSpacesCore/Services/TMSnapshots.swift` | 68 | CORE |
+| 13 | TrashService.swift | `Sources/MacSpacesCore/Services/TrashService.swift` | 38 | CORE |
+| 14 | VolumeMonitor.swift | `Sources/MacSpacesCore/Services/VolumeMonitor.swift` | 49 | CORE |
+| 15 | MacSpacesApp.swift | `Sources/MacSpaces/MacSpacesApp.swift` | 124 | CORE |
+| 16 | Components.swift | `Sources/MacSpaces/Views/Components.swift` | 141 | CORE |
+| 17 | ContentView.swift | `Sources/MacSpaces/Views/ContentView.swift` | 89 | CORE |
+| 18 | DashboardView.swift | `Sources/MacSpaces/Views/DashboardView.swift` | 283 | CORE |
+| 19 | DiskTreeView.swift | `Sources/MacSpaces/Views/DiskTreeView.swift` | 311 | CORE |
+| 20 | OllamaView.swift | `Sources/MacSpaces/Views/OllamaView.swift` | 381 | CORE |
+| 21 | LlamaView.swift | `Sources/MacSpaces/Views/LlamaView.swift` | 379 | CORE |
+| 22 | CachesView.swift | `Sources/MacSpaces/Views/CachesView.swift` | 261 | CORE |
+| 23 | SettingsView.swift | `Sources/MacSpaces/Views/SettingsView.swift` | 266 | CORE |
+| 24 | SpaceMapView.swift | `Sources/MacSpaces/Views/SpaceMapView.swift` | 262 | CORE |
 
 ### Tests
 *verification*

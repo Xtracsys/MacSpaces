@@ -202,7 +202,7 @@ ARTICLES = [
         path="Sources/MacSpaces/Views/DiskTreeView.swift", lines=311, lang="Swift", status="CORE", pkg="MacSpaces",
         phase="v1.1", spec_refs=["README.md"], tested_by="macspaces-tests", related=["diskscanner-swift", "appmodel-swift"],
         lead=[
-            "The whole-disk explorer: NavigationStack drill-down through the scanned tree, a top-150 largest-files mode, live scan progress with cancel, and per-node delete/reveal.",
+            "The whole-disk explorer: three view modes (Space Map, Directory tree, Largest Files), NavigationStack drill-down, live scan progress with cancel, and per-node delete/reveal. The mode picker sits in principal toolbar placement with short labels — centered and untruncated.",
         ],
         sections=[
             ("Details", [
@@ -287,6 +287,26 @@ ARTICLES = [
         key_items=[
             ("Ignore Rules editor", "Feature 8: glob patterns honored by scanners"),
             ("Folder Watcher + Scheduled Audit", "Features 5 and 6 configuration"),
+        ],
+    ),
+
+    dict(
+        slug="spacemapview-swift", title="Sources/MacSpaces/Views/SpaceMapView.swift", category="core",
+        path="Sources/MacSpaces/Views/SpaceMapView.swift", lines=262, lang="Swift", status="CORE", pkg="MacSpaces",
+        phase="v1.1", spec_refs=[], tested_by="", related=["spacemaplayout-swift", "disktree-swift", "appmodel-swift"],
+        lead=[
+            "The interactive treemap view: renders SpaceMapLayout tiles in a ZStack with the four usability layers the first map lacked — branch coloring, zoom navigation, hover feedback, and a legend.",
+        ],
+        sections=[
+            ("Interaction layers", [
+                "Color: hue is a golden-angle function of the depth-0 branch index (stable across zooms), saturation/brightness shift with depth — adjacent branches stay distinguishable and color always answers 'which top-level branch am I in'. Aggregate tiles render gray.",
+                "Navigation: clicking a directory tile re-roots the map (zoomPath); a breadcrumb bar shows the chain from the scan root with an escape hatch back to the whole map; the legend strip lists the current view's largest branches with sizes — clicking one zooms. zoomPath resolves defensively: a deleted or rescanned-away subtree falls back to the scan root.",
+                "Feedback and action: hovering strokes the tile and fills the info bar (color chip, name, size, percent of view, selectable full path); tiles expose native tooltips; context menus offer zoom, Reveal in Finder, and Move to Trash — Trash-only from the map, routed through AppModel.deleteDiskNode so the in-memory tree and the map update together. Labels follow the tile-size policy: name+size, name-only, or nothing.",
+            ]),
+        ],
+        key_items=[
+            ("SpaceMapView(rootNode:)", "Root view: breadcrumbs + map + info bar + legend"),
+            ("static func color(topIndex:depth:aggregate:)", "Branch hue + depth shading, shared with the legend"),
         ],
     ),
 ]

@@ -127,4 +127,25 @@ ARTICLES = [
             ("public func audit() -> CachesAudit", "Per-project DerivedData entries + monolithic caches, size-sorted"),
         ],
     ),
+
+    dict(
+        slug="spacemaplayout-swift", title="Sources/MacSpacesCore/Models/SpaceMapLayout.swift", category="core",
+        path="Sources/MacSpacesCore/Models/SpaceMapLayout.swift", lines=228, lang="Swift", status="CORE", pkg="MacSpacesCore",
+        phase="v1.1", spec_refs=[], tested_by="macspaces-tests", related=["spacemapview-swift", "models-swift"],
+        lead=[
+            "The treemap geometry engine: a pure-CoreGraphics squarified treemap (Bruls, Huizing & van Wijk) over a DiskNode tree. Living in Core — no SwiftUI — keeps the math unit-testable, which is where every layout regression was caught.",
+        ],
+        sections=[
+            ("Readability constraints", [
+                "squarify(values:in:) partitions a CGRect into one rect per value with area proportional to value — the worst-ratio row-growing loop replaces the naive alternating split that produced long thin strips. Emitted rects are clamped to the bounds (accumulated FP drift pushed strip edges past the container in the first test run).",
+                "tiles(for:in:) subdivides recursively with four readability constraints: children whose tile would fall below minTile (10 pt) per side aggregate into a single gray Other tile; a post-layout pass re-culls kept children that siblings squeezed below minTile on an axis (three iterations — the Other tile absorbs them and reflows); subdivision stops at maxDepth 6 and an 800-tile budget, so huge trees degrade to parent tiles rather than churning thousands of rects.",
+                "A lone sub-threshold child cannot produce a visible Other (its area is below minTile² by definition) — aggregates become visible only when several small children sum above the threshold. The culling test fixture encodes exactly that case: five 50 MB children among 70 GB siblings.",
+            ]),
+        ],
+        key_items=[
+            ("static func tiles(for:in:) -> [SpaceTile]", "Full layout pass: culling + recursion + budget"),
+            ("static func squarify(_:in:) -> [CGRect]", "Area-conserving partition; order-preserving rects"),
+            ("static func worst(_:_) -> Double", "Bruls worst-ratio row test"),
+        ],
+    ),
 ]
