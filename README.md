@@ -121,3 +121,6 @@ Copyright 2026 **Xtracsys LLC**. Licensed under the
 [Apache License, Version 2.0](LICENSE). Contributions are welcome — see
 [CONTRIBUTING.md](CONTRIBUTING.md) for the build/test expectations and the
 SPDX header convention.
+
+Questions about MacSpaces, security reports, or anything else about the
+project: **opensource@xtracsys.com**.
