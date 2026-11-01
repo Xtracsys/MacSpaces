@@ -127,6 +127,9 @@ ARTICLES = [
                 "FR-004 (fixes RR-004, pass 1): added scripts/regen-wiki.sh (WIKI_GENERATOR-overridable wrapper with a graceful error) and repointed README, USER_GUIDE, and CONTRIBUTING at it.",
                 "FR-005 (partial RR-005, pass 1): added .github/workflows/tests.yml (macos-14: build app target + run suite on push/PR). Remote creation, commit-email choice, and exFAT housekeeping remain owner decisions.",
             ]),
+            ("Pass 2 ledger (2026-11-01)", [
+                "Full checklist re-run, fresh evidence: secrets/tree 0, secrets/history 0, tracked junk 0, tracked size 9.9 MB → 6.5 MB (FR-001 effect), stale doc counts 0, TODO/FIXME 0, suite 121/121 canonical + fresh clone, app build and launch verified. Security surface unchanged: 3 fixed-arg Process spawn sites, 3 guarded write sites, 0 network APIs. Profiles re-checked — applicability unchanged.",
+            ]),
             ("Findings (initial report-only pass, 2026-10-31)", [
                 "RR-001 (high, blocks): a compiled app bundle is tracked in git (MacSpaces.app at the repo root — binary, Info.plist, code signature) and contains absolute local-path strings. Remove from the index and ignore; the 2-3 MB bundle does not belong in source control.",
                 "RR-002 (medium, blocks): shell scripts are tracked 100644 — a fresh clone cannot run the README's first command (reproduced: permission denied on ./scripts/build-app.sh). Fix with git update-index --chmod=+x.",
