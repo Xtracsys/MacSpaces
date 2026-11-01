@@ -57,11 +57,12 @@ New source files should carry the Apache 2.0 SPDX header:
 `wiki/index.html` or `wiki/wiki_data.json`. After changing code or docs:
 
 ```sh
-python3 ~/.agents/skills/code-wiki-generator/scripts/generate_wiki.py \
-    --source . --out wiki --title "MacSpaces Reference" \
-    --subtitle "Native macOS disk manager with AI-model audits" \
-    --version <ver> wiki-src
+./scripts/regen-wiki.sh
 ```
+
+The generator ships with the code-wiki-generator skill (outside this repo);
+set `WIKI_GENERATOR=/path/to/generate_wiki.py` if it is not installed at the
+default location.
 
 ## Releasing
 

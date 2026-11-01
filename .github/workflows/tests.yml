@@ -1,0 +1,17 @@
+name: tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      - name: Build (app target)
+        run: swift build --product MacSpaces
+      - name: Test suite
+        run: swift run macspaces-tests

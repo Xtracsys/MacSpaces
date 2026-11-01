@@ -16,7 +16,7 @@ ARTICLES = [
             ]),
         ],
         key_items=[
-            ("swift run --scratch-path .build/tests macspaces-tests", "How to run the 86-assertion suite"),
+            ("swift run --scratch-path .build/tests macspaces-tests", "How to run the 121-assertion suite"),
             ("DiskTreeTests.runDeepTreeScan", "Deadlock + double-count regression (hangs pre-fix)"),
             ("withTempRoot(_ body:)", "Fresh fixture root per test"),
         ],
@@ -109,6 +109,38 @@ ARTICLES = [
         key_items=[
             ("./scripts/notarize.sh [path/to/app]", "Sign + notarize + staple; prints setup without credentials"),
             ("MACSPACES_SIGN_IDENTITY / MACSPACES_KEYCHAIN_PROFILE", "The two required environment variables"),
+        ],
+    ),
+
+    dict(
+        slug="release-review", title="Release Readiness Review (GitHub upload)", category="meta",
+        path="(review)", lines=0, lang="report", status="META", pkg="",
+        phase="v1.1", spec_refs=["CONTRIBUTING.md"], tested_by="", related=["readme-md", "build-app-sh", "notarize-sh"],
+        lead=[
+            "Release-readiness review before the GitHub upload. Initial report-only pass flagged five findings; a 3-pass corrective loop (2026-11-01) fixed RR-001…RR-004 and added CI. Verdict after pass 3: READY for upload — remaining items are owner decisions (RR-005).",
+        ],
+        sections=[
+            ("FR record — corrective loop", [
+                "FR-001 (fixes RR-001, pass 1): untracked the compiled MacSpaces.app bundle from git and added MacSpaces.app/ to .gitignore. Verified: git ls-files no longer lists bundle paths; tracked tree shrank by ~2.4 MB.",
+                "FR-002 (fixes RR-002, pass 1): git update-index --chmod=+x on build-app.sh and notarize.sh. Verified: index shows 100755; fresh /tmp clone runs ./scripts/build-app.sh without permission denied (previously reproduced failing).",
+                "FR-003 (fixes RR-003, pass 1): test counts corrected to 121 across README (x2), USER_GUIDE, and wiki content; fresh suite run confirms 121/121.",
+                "FR-004 (fixes RR-004, pass 1): added scripts/regen-wiki.sh (WIKI_GENERATOR-overridable wrapper with a graceful error) and repointed README, USER_GUIDE, and CONTRIBUTING at it.",
+                "FR-005 (partial RR-005, pass 1): added .github/workflows/tests.yml (macos-14: build app target + run suite on push/PR). Remote creation, commit-email choice, and exFAT housekeeping remain owner decisions.",
+            ]),
+            ("Findings (initial report-only pass, 2026-10-31)", [
+                "RR-001 (high, blocks): a compiled app bundle is tracked in git (MacSpaces.app at the repo root — binary, Info.plist, code signature) and contains absolute local-path strings. Remove from the index and ignore; the 2-3 MB bundle does not belong in source control.",
+                "RR-002 (medium, blocks): shell scripts are tracked 100644 — a fresh clone cannot run the README's first command (reproduced: permission denied on ./scripts/build-app.sh). Fix with git update-index --chmod=+x.",
+                "RR-003 (medium): stale test counts in README (100 and 86), USER_GUIDE (100), and this wiki's overview (116) versus the actual 121.",
+                "RR-004 (low): the wiki-regeneration command in three docs points at a machine-specific skills path contributors do not have.",
+                "RR-005 (informational): no git remote or CI workflow yet; commits carry a personal email (owner decision for a public repo); exFAT dev volume regenerates AppleDouble junk (periodic find -name ._ -delete, or APFS reformat).",
+            ]),
+            ("Clean passes", [
+                "Secrets: none in tree or history; notarize.sh contains placeholders only. Dependencies: zero (Apple frameworks only) — supply chain empty by design. Clean-copy test: clone + verbatim README steps — test suite passes 121/121 in the clone (sources self-contained); the app build itself is blocked only by RR-002. Security: entry points unchanged and hardened (fixed-arg Process spawns, symlink-safe writes, deletion guards, TOCTOU re-verification); no network access; not a penetration test.",
+            ]),
+        ],
+        key_items=[
+            ("Verdict: NOT READY", "Two pre-upload fixes: RR-001 untrack bundle, RR-002 exec bits"),
+            ("Clean-copy clone test", "121/121 in /tmp clone; app build blocked only by exec bits"),
         ],
     ),
 ]

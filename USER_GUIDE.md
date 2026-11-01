@@ -154,4 +154,4 @@ periodic deep audits. Ignore rules can skip known-noisy trees.
 ## 6. Learn more
 
 - **Project wiki** — `wiki/index.html`: per-file documentation and architecture.
-- **Regenerate the wiki**: `python3 ~/.agents/skills/code-wiki-generator/scripts/generate_wiki.py --source . --out wiki wiki-src`
+- **Regenerate the wiki**: `./scripts/regen-wiki.sh`

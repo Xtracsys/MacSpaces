@@ -48,7 +48,7 @@ operations respectively.
 Requires macOS 13+ and Swift 5.9+ (Command Line Tools are sufficient).
 
 ```sh
-swift run --scratch-path .build/tests macspaces-tests   # 100-assertion suite
+swift run --scratch-path .build/tests macspaces-tests   # 121-assertion suite
 ./scripts/build-app.sh                                  # → build/MacSpaces.app
 ./scripts/build-app.sh --install                        # → /Applications
 ```
@@ -88,7 +88,7 @@ visible — keep the default location or symlink it.
 - **[USER_GUIDE.md](USER_GUIDE.md)** — full walkthrough of every tab, the safety model, and troubleshooting.
 - **[Project wiki](wiki/index.html)** — tabbed per-file documentation (open `wiki/index.html` in a browser).
 - Regenerate the wiki after code changes:
-  `python3 ~/.agents/skills/code-wiki-generator/scripts/generate_wiki.py --source . --out wiki wiki-src`
+  `./scripts/regen-wiki.sh`
 
 ## Project layout
 
@@ -110,7 +110,7 @@ Sources/MacSpacesCore/
     TMSnapshots.swift       tmutil list/thin for local APFS snapshots
     ScheduledAudit.swift    headless audit, JSON reports, launchd weekly digest
 Sources/MacSpaces/          @main scene + SwiftUI views (incl. CachesView)
-Tests/MacSpacesTestRunner/  macro-free 86-assertion suite
+Tests/MacSpacesTestRunner/  macro-free 121-assertion suite
 scripts/                    .app packaging + icon generation
 wiki-src/                   wiki content modules (regenerate with the command above)
 ```

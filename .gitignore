@@ -15,3 +15,4 @@ build/
 # SwiftPM
 *.xcodeproj
 Package.resolved
+MacSpaces.app/
