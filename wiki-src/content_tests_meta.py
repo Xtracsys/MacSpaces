@@ -130,6 +130,11 @@ ARTICLES = [
             ("Pass 2 ledger (2026-11-01)", [
                 "Full checklist re-run, fresh evidence: secrets/tree 0, secrets/history 0, tracked junk 0, tracked size 9.9 MB → 6.5 MB (FR-001 effect), stale doc counts 0, TODO/FIXME 0, suite 121/121 canonical + fresh clone, app build and launch verified. Security surface unchanged: 3 fixed-arg Process spawn sites, 3 guarded write sites, 0 network APIs. Profiles re-checked — applicability unchanged.",
             ]),
+            ("Pass 3 ledger (2026-11-01, final)", [
+                "Full checklist re-run, fresh evidence: all pass-2 checks reproduce clean; release build succeeds; suite 121/121; app launch verified.",
+                "FR-006 (pass 3): scripts/regen-wiki.sh was created on exFAT without a tracked exec bit — the same defect class as RR-002, caught by the pass-3 clone check. git update-index --chmod=+x applied; verified executable (100755) in a fresh clone from final HEAD.",
+                "Secret-scan matches reduced to 3 justified false positives (this ledger's own wording). Final verdict: READY for GitHub upload. Remaining owner decisions: create the remote and push; confirm commit email for public history; add a README screenshot; exFAT AppleDouble housekeeping.",
+            ]),
             ("Findings (initial report-only pass, 2026-10-31)", [
                 "RR-001 (high, blocks): a compiled app bundle is tracked in git (MacSpaces.app at the repo root — binary, Info.plist, code signature) and contains absolute local-path strings. Remove from the index and ignore; the 2-3 MB bundle does not belong in source control.",
                 "RR-002 (medium, blocks): shell scripts are tracked 100644 — a fresh clone cannot run the README's first command (reproduced: permission denied on ./scripts/build-app.sh). Fix with git update-index --chmod=+x.",
