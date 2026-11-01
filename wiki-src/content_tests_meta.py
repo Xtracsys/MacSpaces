@@ -135,6 +135,10 @@ ARTICLES = [
                 "FR-006 (pass 3): scripts/regen-wiki.sh was created on exFAT without a tracked exec bit — the same defect class as RR-002, caught by the pass-3 clone check. git update-index --chmod=+x applied; verified executable (100755) in a fresh clone from final HEAD.",
                 "Secret-scan matches reduced to 3 justified false positives (this ledger's own wording). Final verdict: READY for GitHub upload. Remaining owner decisions: create the remote and push; confirm commit email for public history; add a README screenshot; exFAT AppleDouble housekeeping.",
             ]),
+            ("Pass 4 ledger (2026-11-01, final confirmation)", [
+                "Full checklist re-run from clean HEAD, all fresh evidence: secrets 0 unjustified / history 0, deps zero, tracked junk 0 (6.5 MB), docs accurate, TODO/FIXME 0, release build 0 errors, suite 121/121 canonical AND in a fresh clone, all three scripts executable in the clone, app launch verified. CI workflow YAML parses and mirrors the locally-verified commands; actual CI execution remains unverified until the first push (owner action).",
+                "No new findings. No code changes this pass — confirmation pass. Verdict stands: READY for GitHub upload.",
+            ]),
             ("Findings (initial report-only pass, 2026-10-31)", [
                 "RR-001 (high, blocks): a compiled app bundle is tracked in git (MacSpaces.app at the repo root — binary, Info.plist, code signature) and contains absolute local-path strings. Remove from the index and ignore; the 2-3 MB bundle does not belong in source control.",
                 "RR-002 (medium, blocks): shell scripts are tracked 100644 — a fresh clone cannot run the README's first command (reproduced: permission denied on ./scripts/build-app.sh). Fix with git update-index --chmod=+x.",
