@@ -412,10 +412,13 @@ enum DiskTreeTests {
         expectEqual(tree.largestFiles().first?.name, "b.bin", r, "largest file first")
 
         r.check(DiskScanner.shouldSkip(path: "/System/Volumes/Data", scanRoot: "/"), "skip firmlink volume")
+        r.check(DiskScanner.shouldSkip(path: "/.nofollow/Volumes/XSdrive", scanRoot: "/"), "skip .nofollow synthetic volume mirror")
+        r.check(!DiskScanner.shouldSkip(path: "/Users/me/.nofollow", scanRoot: "/Users/me"), ".nofollow skip only applies at root")
         r.check(DiskScanner.shouldSkip(path: "/dev/null", scanRoot: "/"), "skip /dev")
         r.check(DiskScanner.shouldSkip(path: "/.Spotlight-V100/store", scanRoot: "/"), "skip spotlight")
         r.check(DiskScanner.shouldSkip(path: "/Users/me/.Trashes", scanRoot: "/Users/me"), "skip trashes")
         r.check(!DiskScanner.shouldSkip(path: "/Users/me/System/Volumes", scanRoot: "/Users/me"), "root prefixes only apply at root")
+        runRevealFallback(r)
     }
 
     /// REGRESSION for the bounded-pool deadlock: a deep tree scanned with
@@ -453,6 +456,25 @@ enum DiskTreeTests {
 
         let wideNode = await DiskScanner(root: wide, concurrency: 2).scan()
         expectEqual(wideNode.totalBytes, Int64(30 * 4096), r, "wide tree scanned without deadlock")
+    }
+
+    /// Reveal fallback walks up to the nearest existing ancestor.
+    static func runRevealFallback(_ r: TestRecorder) {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("reveal-test-\(UUID().uuidString)")
+        let sub = dir.appendingPathComponent("sub")
+        try? FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let exists = sub.appendingPathComponent("file.txt")
+        try? Data("x".utf8).write(to: exists)
+        expectEqual(TrashService.revealTarget(for: exists), exists.standardizedFileURL, r, "existing file reveals itself")
+
+        try? FileManager.default.removeItem(at: exists)
+        expectEqual(TrashService.revealTarget(for: exists), sub.standardizedFileURL, r, "deleted file falls back to parent")
+
+        try? FileManager.default.removeItem(at: sub)
+        expectEqual(TrashService.revealTarget(for: exists), dir.standardizedFileURL, r, "deleted folder falls back to grandparent")
     }
 
     private static func node(_ name: String, path: String, bytes: Int64, children: [DiskNode] = [], isDirectory: Bool = true) -> DiskNode {

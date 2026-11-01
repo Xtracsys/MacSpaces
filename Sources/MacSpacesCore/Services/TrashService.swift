@@ -50,7 +50,33 @@ public enum TrashService {
         return nil
     }
 
-    public static func revealInFinder(_ urls: [URL]) {
-        NSWorkspace.shared.activateFileViewerSelecting(urls)
+    /// Reveals `urls` in Finder. Falls back to the nearest existing ancestor
+    /// when an item no longer exists (deleted since the scan, or a synthetic
+    /// path Finder cannot show). Returns false when the reveal had to fall
+    /// back — callers can surface that in the feedback strip.
+    @discardableResult
+    public static func revealInFinder(_ urls: [URL]) -> Bool {
+        let targets = urls.compactMap { revealTarget(for: $0) }
+        guard !targets.isEmpty else { return false }
+        NSWorkspace.shared.activateFileViewerSelecting(targets)
+        return urls.allSatisfy { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    /// The URL itself when it exists, else its nearest existing ancestor,
+    /// else nil.
+    public static func revealTarget(for url: URL) -> URL? {
+        var current = url.standardizedFileURL
+        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        for _ in 0..<32 {
+            if FileManager.default.fileExists(atPath: current.path) {
+                return current
+            }
+            let parent = current.deletingLastPathComponent()
+            if parent.path == current.path || current.path == home {
+                return nil
+            }
+            current = parent
+        }
+        return nil
     }
 }

@@ -1,6 +1,6 @@
 # MacSpaces Reference — Wiki Index
 
-> Generated 2026-10-31 15:16 UTC · 32 articles · data: `wiki_data.json`
+> Generated 2026-11-01 02:41 UTC · 32 articles · data: `wiki_data.json`
 
 
 ## How to edit this wiki

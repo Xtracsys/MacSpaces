@@ -62,6 +62,9 @@ struct DiskScanner {
     static let skippedRootPrefixes: [String] = [
         "/System/Volumes", "/dev", "/private/var/vm", "/Volumes", "/.Spotlight-V100",
         "/.fseventsd", "/.DocumentRevisions-V100", "/private/tmp", "/cores",
+        // macOS synthetic mirror of mounted volumes — double-counts every
+        // external drive and yields paths Finder cannot reveal.
+        "/.nofollow",
     ]
 
     static let resourceKeys: Set<URLResourceKey> = [

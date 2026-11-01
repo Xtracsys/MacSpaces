@@ -107,7 +107,11 @@ struct SpaceMapView: View {
                     if node.isDirectory {
                         Button("Zoom into “\(node.name)”") { zoomPath = node.path }
                     }
-                    Button("Reveal in Finder") { TrashService.revealInFinder([node.url]) }
+                    Button("Reveal in Finder") {
+                        if !TrashService.revealInFinder([node.url]) {
+                            model.lastDeletionSummary = "Revealed the nearest existing folder — this item is no longer at its scanned path."
+                        }
+                    }
                     Divider()
                     Button("Move to Trash…", role: .destructive) { pendingDelete = node }
                 }
@@ -282,7 +286,9 @@ struct SpaceMapView: View {
         if aggregate {
             return Color(hue: 0, saturation: 0, brightness: max(0.55, 0.8 - Double(depth) * 0.04))
         }
-        let hue = (Double(topIndex) * 0.38).truncatingRemainder(dividingBy: 1.0)
+        // Start the ramp at blue — hue 0 (red) reads as an error state when
+        // one branch dominates the map.
+        let hue = (0.55 + Double(topIndex) * 0.38).truncatingRemainder(dividingBy: 1.0)
         return Color(
             hue: hue,
             saturation: 0.45 + min(0.2, Double(depth) * 0.05),

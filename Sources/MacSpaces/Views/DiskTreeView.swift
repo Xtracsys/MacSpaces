@@ -227,7 +227,11 @@ struct DiskTreeView: View {
         }
         .contentShape(Rectangle())
         .contextMenu {
-            Button("Reveal in Finder") { TrashService.revealInFinder([child.url]) }
+            Button("Reveal in Finder") {
+                if !TrashService.revealInFinder([child.url]) {
+                    model.lastDeletionSummary = "Revealed the nearest existing folder — this item is no longer at its scanned path."
+                }
+            }
             Divider()
             Button("Move to Trash…", role: .destructive) { nodePendingDelete = child }
         }
@@ -277,7 +281,11 @@ struct DiskTreeView: View {
                     }
                     .contentShape(Rectangle())
                     .contextMenu {
-                        Button("Reveal in Finder") { TrashService.revealInFinder([file.url]) }
+                        Button("Reveal in Finder") {
+                            if !TrashService.revealInFinder([file.url]) {
+                                model.lastDeletionSummary = "Revealed the nearest existing folder — this item is no longer at its scanned path."
+                            }
+                        }
                         Divider()
                         Button("Move to Trash…", role: .destructive) { nodePendingDelete = file }
                     }

@@ -103,7 +103,7 @@ ARTICLES = [
         ],
         sections=[
             ("Design", [
-                "deleteMode is UserDefaults-backed and @MainActor so Settings and AppModel always agree. deleteOne uses FileManager.trashItem (trashing a symlink trashes the link, never its target) or removeItem, returning per-URL DeleteOutcome so batches report 'Moved 5, failed 1: …'. deleteOne first consults refusalReason(for:), which refuses '/' and the home directory itself — a guard against pathological configured paths. revealInFinder uses NSWorkspace.activateFileViewerSelecting. The app is non-sandboxed, which full-disk trashItem requires.",
+                "deleteMode is UserDefaults-backed and @MainActor so Settings and AppModel always agree. deleteOne uses FileManager.trashItem (trashing a symlink trashes the link, never its target) or removeItem, returning per-URL DeleteOutcome so batches report 'Moved 5, failed 1: …'. deleteOne first consults refusalReason(for:), which refuses '/' and the home directory itself — a guard against pathological configured paths. revealInFinder verifies existence and falls back to the nearest existing ancestor (revealTarget walks up to 32 levels), returning false so callers can surface 'revealed nearest existing folder' feedback — synthetic or since-deleted paths no longer fail silently. Hue zero also no longer maps to red in the space map (the ramp starts at blue), because a dominant branch in red reads as an error state. The app is non-sandboxed, which full-disk trashItem requires.",
             ]),
         ],
         key_items=[
