@@ -12,7 +12,8 @@ public final class VolumeMonitor: ObservableObject {
     public init(pollInterval: TimeInterval = 30) {
         refresh()
         timer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
+            guard let monitor = self else { return }
+            Task { @MainActor in monitor.refresh() }
         }
     }
 

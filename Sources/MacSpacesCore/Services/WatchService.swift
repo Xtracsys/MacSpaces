@@ -17,7 +17,8 @@ public final class WatchService: ObservableObject {
     public init() {
         // Re-check every 5 minutes.
         timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
-            Task { await self?.check() }
+            guard let service = self else { return }
+            Task { await service.check() }
         }
     }
 
