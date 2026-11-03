@@ -8,43 +8,41 @@ ARTICLES = [
             "The codebase splits into two SwiftPM targets. MacSpacesCore holds everything that thinks — value types, five scanners, seven services — with no SwiftUI, so the macro-free test runner can link it. The MacSpaces app target holds everything that draws: the @main scene, a menu bar extra with quick-clean actions, and eight views. Views observe AppModel (injected via .environmentObject) and never touch the filesystem; every mutation flows through AppModel, which delegates to Core services and refreshes the relevant audit afterward.",
         ],
         sections=[
-            ("v1.1 changelog — bugs fixed", [
-                "Bounded-pool deadlock: DiskScanner.scanDirectory held its semaphore permit across the child TaskGroup await; 12 blocked parents could hold all 12 permits while children waited forever. The permit is now released immediately after enumeration, before waiting on children. A regression test scans deep (6-level) and wide (30-branch) trees at concurrency 2 — it hangs under the old code.",
-                "Item double-counting: the tree scanner added +1 per subdirectory entry AND included the child node's own count — every directory was counted twice. The deep-tree fixture exposed it (19 vs the correct 13).",
-                "Orphan-cleanup TOCTOU: between audit and deletion a running Ollama server can reference a previously-orphaned blob in a new pull. cleanOrphanedBlobs now re-runs the audit inside the delete path and trashes only blobs still orphaned; skipped blobs are reported.",
-                "Homebrew version reported the package dir name ('llama.cpp') instead of the Cellar version directory; dialogs under permanent-delete mode claimed Trash semantics; sidebar badges rendered '0'; an emptied custom-GGUF list silently reverted to defaults.",
+            ("Concurrency and audit integrity", [
+                "DiskScanner.scanDirectory releases its bounded-pool permit after directory enumeration and before awaiting child tasks. This prevents parent tasks from occupying every permit while their children wait for one. A deep and wide tree fixture covers the concurrency limit.",
+                "Directory totals count each item once: a directory contributes its own node and the descendants reported by its child node. The disk-tree tests cover this accounting rule.",
+                "Ollama cleanup re-runs the audit immediately before deletion. Only blobs that remain unreferenced are moved to Trash, so a model pull that starts after the original audit cannot make a shared blob eligible for removal.",
+                "Version display uses the installed Homebrew Cellar version. Cleanup dialogs name the selected deletion mode, empty custom-store settings remain empty, and zero-valued badges display consistently.",
             ]),
-            ("Space map usability round", [
-                "The first Space Map (alternating HStack/VStack split, 3-color depth cycling, render-everything) produced thin strips, 'More...' label soup, and no way to act on what you saw. Replaced with a proper package: SpaceMapLayout in Core implements the Bruls squarified treemap (area conservation, bounded aspect ratios), area-based culling into an Other aggregate, iterative re-culling of kept children squeezed below minTile on an axis, an 800-tile budget and maxDepth 6, and FP-drift clamping to bounds.",
-                "SpaceMapView renders the tiles with color per top-level branch (golden-angle hue, darkening with depth — color answers 'which branch am I in'), a strict label policy (name+size when the tile fits, name when smaller, nothing below), a hover info bar with percent-of-view and full path, click-to-zoom with a breadcrumb bar, a clickable legend, and Reveal/Trash context menus (Trash-only from the map).",
-                "The Disk Usage toolbar moved the mode switch to principal placement with short labels (Map / Tree / Files) — it now sits centered in the top bar instead of truncating at the trailing edge.",
-                "Testable-by-construction: the layout is pure CoreGraphics in Core; 16 new assertions cover area conservation, the aspect-ratio bound that kills strips, culling, the tile budget, and degenerate inputs. 121 total.",
+            ("Space-map design", [
+                "SpaceMapLayout uses the Bruls squarified treemap algorithm to preserve area proportions while keeping tile aspect ratios usable. It aggregates small entries, limits depth and tile count, and clamps floating-point drift to the view bounds.",
+                "SpaceMapView colors tiles by top-level directory, scales labels to tile size, and provides a hover summary, zoom navigation, breadcrumbs, and a legend. Reveal and Trash actions are available from the map; deletion uses Trash.",
+                "The Map / Tree / Files mode switch sits in the main Disk Usage toolbar. The layout is implemented in MacSpacesCore and has focused coverage for area conservation, culling, tile limits, and degenerate inputs.",
             ]),
-            ("v1.1 security round 2", [
-                "Symlink-safe fixed-path writes: ScheduledAudit gained isSafeWriteTarget (refuses symlinked targets and missing parent dirs) and it now guards the audit-report write, the launchd plist write, and the save-panel export — a pre-planted symlink can no longer redirect those writes.",
-                "IgnoreRules hardening: runs of '*' collapse to a single quantifier (single '*' = [^/]* within a segment, '**' = .* across segments), patterns are capped at 256 chars and 500 rules — pathological input can no longer backtrack-blow up the per-file excludes() call. The test compiles a 300-token pathological glob and asserts a 200-char path matches in under 0.5 s.",
-                "Deletion root guard: TrashService.refusalReason refuses '/' and the home directory itself, so a pathological configured path can never become a catastrophic delete.",
-                "Model-delete TOCTOU: deleteOllamaModel now re-runs the audit in the delete path and trashes manifest + unique blobs from the FRESH model set (previously it computed from the stale on-screen audit). Migration dedupe moved before reference counting, so the same model present in manifests/ and manifests-v2/ no longer inflates shared-layer attribution — verified against the live store (26 deduped models, 2 orphans) with an independent implementation.",
+            ("Safety and data protection", [
+                "Scheduled reports, launch-agent files, and user-selected exports reject unsafe targets, including symlinked paths and missing parent folders. Ignore patterns have explicit length and count limits to keep scans predictable.",
+                "TrashService refuses deletion of the filesystem root and the user's home directory. Ordinary cleanup uses Trash by default; Ollama orphan cleanup always rechecks references before moving files.",
+                "The auditor reads both classic Ollama manifests and the manifests-v2 layout, deduplicates matching models before counting shared layers, and preserves blobs referenced by any manifest.",
             ]),
-            ("Installer and open-source packaging", [
-                "scripts/build-app.sh grew --universal (arm64+x86_64 fat binary via SwiftPM cross-compilation, verified with lipo) and --dmg (drag-to-Applications UDZO disk image via hdiutil over a staging dir with an /Applications symlink). A bash 3.2 pitfall surfaced in testing: empty array expansion is 'unbound' under set -u, fixed with the ${ARCH_ARGS[@]+…} guard.",
-                "scripts/notarize.sh covers distribution: Developer ID signing with --options runtime --timestamp, notarytool submission from a keychain profile, stapler staple, and a final spctl check — printing full credential setup instructions when env vars are absent.",
-                "Open-sourced under Apache 2.0 (Copyright 2026 Xtracsys LLC): canonical LICENSE text with the boilerplate appendix, NOTICE (zero third-party content — Apple frameworks only, icon generated at build time), CONTRIBUTING.md (test-gate rules, deletion-surface guardrails, SPDX header convention), .gitignore, and a git repo prepared for GitHub upload.",
+            ("Build and distribution", [
+                "scripts/build-app.sh supports universal arm64 + x86_64 builds and a drag-to-Applications DMG. The script records the SDK fallback and target selection used to keep app builds separate from the test runner.",
+                "scripts/notarize.sh documents Developer ID signing, hardened runtime, notarization, ticket stapling, and Gatekeeper verification. It reports the required credential setup when signing credentials are not configured.",
+                "The repository includes Apache-2.0 source licensing, a NOTICE file, contributor guidance, and a macOS CI workflow for the app build and test runner.",
             ]),
-            ("v1.1 changelog — the ten features", [
+            ("Additional capabilities", [
                 "Xcode/SwiftPM cache cleaner (Caches tab), local Time Machine snapshot listing + thinning via tmutil, Ollama version manager (multi-tag groups, newest-first), GGUF header metadata parsing (architecture, quantization, context length), folder watcher with threshold alerts, weekly launchd audit with digest notification, LM Studio/Jan/GPT4All store support, glob ignore rules honored by scans and GGUF collection, menu-bar quick-clean actions, and JSON report export plus the --audit-json CLI.",
             ]),
             ("Safety model", [
                 "Every destructive action funnels through TrashService with an explicit DeletionMode; Trash is the default everywhere and Ollama orphan cleanup is hard-wired to Trash-only with re-verification. Deleting a single Ollama model removes only the manifest plus blobs referenced by no other manifest — shared layers survive. Cache cleanup is Trash-only; snapshot thinning is a purgeable-space system operation that never touches backup drives. The app reads ~/.ollama/ollama.pid and probes it with kill(pid, 0), showing a Running badge so users know to restart the server after cleanup.",
             ]),
-            ("Ollama 0.34 store migration", [
-                "Ollama 0.34.1 introduces manifests-v2/ (observed on a live 35 GB store as an empty directory skeleton) alongside the classic manifests/ tree. The auditor scans BOTH roots, parses both with the same lenient JSON decoder, and deduplicates model+tag entries in favor of manifests-v2. On the reference machine all 14 live models still live in manifests/, and the 298 unreferenced blobs (3.3 GB — one 1.6 GB leftover plus ~300 small config/tokenizer blobs) are genuine orphans. metadata/ holds per-GGUF kv dumps and is never treated as blobs.",
+            ("Ollama store formats", [
+                "The auditor supports the classic manifests/ tree and the manifests-v2/ layout used by newer Ollama versions. Both are parsed with the same decoder, and matching model + tag entries are deduplicated before blob references are counted. Metadata dumps are not treated as model blobs.",
             ]),
         ],
         key_items=[
             ("MacSpacesCore (library)", "Models, 5 scanners, 7 services — no SwiftUI, test-linkable"),
             ("MacSpaces (executable)", "@main + MenuBarExtra + 8 views; CLI flags dispatch in init"),
-            ("macspaces-tests (executable)", "Macro-free harness; 86 assertions; swift run --scratch-path .build/tests macspaces-tests"),
+            ("macspaces-tests (executable)", "Macro-free harness; 121 assertions; swift run --scratch-path .build/tests macspaces-tests"),
             ("scripts/build-app.sh", "Release build → .app with icon; auto-SDK fallback for the CLT macro gap"),
         ],
     ),

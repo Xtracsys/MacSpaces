@@ -4,7 +4,7 @@ ARTICLES = [
         path="Tests/MacSpacesTestRunner/Runner.swift", lines=515, lang="Swift", status="TEST", pkg="macspaces-tests",
         phase="v1.1", spec_refs=[], tested_by="", related=["ollamaauditor-swift", "ggufmeta-swift", "diskscanner-swift", "ignorerules-swift"],
         lead=[
-            "100 assertions across seven suites, run by a hand-rolled harness that exits non-zero on failure. The harness exists because this machine's Command Line Tools ship neither the macOS XCTest framework nor the Swift Testing macro plugin — the same toolchain gap that forces the 26.5 SDK fallback for the SwiftUI app target.",
+            "The test runner executes seven suites and exits non-zero on failure. It avoids a dependency on XCTest and the Swift Testing macro plugin, so the Core library can be checked with a standard Swift toolchain. The app build also includes a documented SDK fallback for toolchains missing SwiftUI macro support.",
         ],
         sections=[
             ("Harness and coverage", [
@@ -78,7 +78,7 @@ ARTICLES = [
     ),
     dict(
         slug="readme-md", title="README.md", category="meta",
-        path="README.md", lines=95, lang="Markdown", status="META", pkg="",
+        path="README.md", lines=130, lang="Markdown", status="META", pkg="",
         phase="v1.1", spec_refs=[], tested_by="", related=["overview-user-guide", "overview-architecture"],
         lead=[
             "The repository front door: feature pillars (including all ten v1.1 additions), the safety model, build instructions with the CLT caveat, permissions guidance, the Ollama 0.34 dual-manifest note, and pointers to USER_GUIDE.md and the wiki.",
@@ -112,47 +112,4 @@ ARTICLES = [
         ],
     ),
 
-    dict(
-        slug="release-review", title="Release Readiness Review (GitHub upload)", category="meta",
-        path="(review)", lines=0, lang="report", status="META", pkg="",
-        phase="v1.1", spec_refs=["CONTRIBUTING.md"], tested_by="", related=["readme-md", "build-app-sh", "notarize-sh"],
-        lead=[
-            "Release-readiness review before the GitHub upload. Initial report-only pass flagged five findings; a 3-pass corrective loop (2026-11-01) fixed RR-001…RR-004 and added CI. Verdict after pass 3: READY for upload — remaining items are owner decisions (RR-005).",
-        ],
-        sections=[
-            ("FR record — corrective loop", [
-                "FR-001 (fixes RR-001, pass 1): untracked the compiled MacSpaces.app bundle from git and added MacSpaces.app/ to .gitignore. Verified: git ls-files no longer lists bundle paths; tracked tree shrank by ~2.4 MB.",
-                "FR-002 (fixes RR-002, pass 1): git update-index --chmod=+x on build-app.sh and notarize.sh. Verified: index shows 100755; fresh /tmp clone runs ./scripts/build-app.sh without permission denied (previously reproduced failing).",
-                "FR-003 (fixes RR-003, pass 1): test counts corrected to 121 across README (x2), USER_GUIDE, and wiki content; fresh suite run confirms 121/121.",
-                "FR-004 (fixes RR-004, pass 1): added scripts/regen-wiki.sh (WIKI_GENERATOR-overridable wrapper with a graceful error) and repointed README, USER_GUIDE, and CONTRIBUTING at it.",
-                "FR-005 (partial RR-005, pass 1): added .github/workflows/tests.yml (macos-14: build app target + run suite on push/PR). Remote creation, commit-email choice, and exFAT housekeeping remain owner decisions.",
-            ]),
-            ("Pass 2 ledger (2026-11-01)", [
-                "Full checklist re-run, fresh evidence: secrets/tree 0, secrets/history 0, tracked junk 0, tracked size 9.9 MB → 6.5 MB (FR-001 effect), stale doc counts 0, TODO/FIXME 0, suite 121/121 canonical + fresh clone, app build and launch verified. Security surface unchanged: 3 fixed-arg Process spawn sites, 3 guarded write sites, 0 network APIs. Profiles re-checked — applicability unchanged.",
-            ]),
-            ("Pass 3 ledger (2026-11-01, final)", [
-                "Full checklist re-run, fresh evidence: all pass-2 checks reproduce clean; release build succeeds; suite 121/121; app launch verified.",
-                "FR-006 (pass 3): scripts/regen-wiki.sh was created on exFAT without a tracked exec bit — the same defect class as RR-002, caught by the pass-3 clone check. git update-index --chmod=+x applied; verified executable (100755) in a fresh clone from final HEAD.",
-                "Secret-scan matches reduced to 3 justified false positives (this ledger's own wording). Final verdict: READY for GitHub upload. Remaining owner decisions: create the remote and push; confirm commit email for public history; add a README screenshot; exFAT AppleDouble housekeeping.",
-            ]),
-            ("Pass 4 ledger (2026-11-01, final confirmation)", [
-                "Full checklist re-run from clean HEAD, all fresh evidence: secrets 0 unjustified / history 0, deps zero, tracked junk 0 (6.5 MB), docs accurate, TODO/FIXME 0, release build 0 errors, suite 121/121 canonical AND in a fresh clone, all three scripts executable in the clone, app launch verified. CI workflow YAML parses and mirrors the locally-verified commands; actual CI execution remains unverified until the first push (owner action).",
-                "No new findings. No code changes this pass — confirmation pass. Verdict stands: READY for GitHub upload.",
-            ]),
-            ("Findings (initial report-only pass, 2026-10-31)", [
-                "RR-001 (high, blocks): a compiled app bundle is tracked in git (MacSpaces.app at the repo root — binary, Info.plist, code signature) and contains absolute local-path strings. Remove from the index and ignore; the 2-3 MB bundle does not belong in source control.",
-                "RR-002 (medium, blocks): shell scripts are tracked 100644 — a fresh clone cannot run the README's first command (reproduced: permission denied on ./scripts/build-app.sh). Fix with git update-index --chmod=+x.",
-                "RR-003 (medium): stale test counts in README (100 and 86), USER_GUIDE (100), and this wiki's overview (116) versus the actual 121.",
-                "RR-004 (low): the wiki-regeneration command in three docs points at a machine-specific skills path contributors do not have.",
-                "RR-005 (informational): no git remote or CI workflow yet; commits carry a personal email (owner decision for a public repo); exFAT dev volume regenerates AppleDouble junk (periodic find -name ._ -delete, or APFS reformat).",
-            ]),
-            ("Clean passes", [
-                "Secrets: none in tree or history; notarize.sh contains placeholders only. Dependencies: zero (Apple frameworks only) — supply chain empty by design. Clean-copy test: clone + verbatim README steps — test suite passes 121/121 in the clone (sources self-contained); the app build itself is blocked only by RR-002. Security: entry points unchanged and hardened (fixed-arg Process spawns, symlink-safe writes, deletion guards, TOCTOU re-verification); no network access; not a penetration test.",
-            ]),
-        ],
-        key_items=[
-            ("Verdict: NOT READY", "Two pre-upload fixes: RR-001 untrack bundle, RR-002 exec bits"),
-            ("Clean-copy clone test", "121/121 in /tmp clone; app build blocked only by exec bits"),
-        ],
-    ),
 ]

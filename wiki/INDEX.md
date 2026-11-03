@@ -1,6 +1,6 @@
 # MacSpaces Reference — Wiki Index
 
-> Generated 2026-11-01 05:21 UTC · 33 articles · data: `wiki_data.json`
+> Generated 2026-11-03 06:39 UTC · 32 articles · data: `wiki_data.json`
 
 
 ## How to edit this wiki
@@ -68,6 +68,5 @@
 | 01 | Package.swift | `Package.swift` | 34 | META |
 | 02 | build-app.sh | `scripts/build-app.sh` | 82 | META |
 | 03 | make-icon.swift | `scripts/make-icon.swift` | 114 | META |
-| 04 | README.md | `README.md` | 95 | META |
+| 04 | README.md | `README.md` | 130 | META |
 | 05 | notarize.sh | `scripts/notarize.sh` | 64 | META |
-| 06 | (review) | `(review)` | — | META |

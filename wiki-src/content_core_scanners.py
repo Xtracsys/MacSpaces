@@ -52,15 +52,14 @@ ARTICLES = [
         path="Sources/MacSpacesCore/Scanners/OllamaAuditor.swift", lines=290, lang="Swift", status="CORE", pkg="MacSpacesCore",
         phase="v1.1", spec_refs=["README.md"], tested_by="macspaces-tests", related=["models-swift", "appmodel-swift", "overview-architecture"],
         lead=[
-            "The orphan-detection engine: parses every manifest in both store layouts, cross-references all blobs, attributes shared layers, groups multi-tag models, and reports integrity problems plus the ~/.ollama footprint. Verified against a live 35 GB store with 3,168 blobs.",
+            "The orphan-detection engine parses manifests from both Ollama store layouts, cross-references blob usage, groups multi-tag models, and reports integrity problems and the local store footprint.",
         ],
         sections=[
             ("Dual-layout manifests", [
-                "Ollama 0.34.1 is migrating to manifests-v2/ (observed on the reference machine as an empty directory skeleton). manifestRoots scans both manifests/ and manifests-v2/; parseManifest locates the store root by matching any path component equal to 'manifests' or prefixed 'manifests-' (the old lastIndex(of: \"manifests\") silently skipped v2 paths). dedupeMigrationDuplicates keeps one entry per model+tag, preferring v2. metadata/ (per-GGUF kv JSON dumps) is never mistaken for manifests or blobs.",
-                "Live-store results: 14 models across manifests/ (lfm3/d1/nomic + hf.co pulls), 2,870 referenced digests, 298 orphaned blobs totaling 3.3 GB (one 1.59 GB leftover, one 0.52 GB, ~300 small config/tokenizer blobs) — cross-checked with an independent Python implementation.",
+                "manifestRoots scans both manifests/ and manifests-v2/. parseManifest locates the store root by matching a path component equal to 'manifests' or prefixed 'manifests-'. dedupeMigrationDuplicates keeps one entry per model + tag, preferring manifests-v2 when both layouts contain the same entry. metadata/ (per-GGUF key-value dumps) is never treated as manifests or model blobs.",
             ]),
             ("Shared layers, integrity, version groups", [
-                "referenceCounts maps digest → manifest count; zero references = orphan, 2+ = shared layer. The attribution post-pass filters on referenceCounts directly — the original implementation subtracted audit.sharedBlobDigests before that set was populated, miscounting every shared blob as unique (caught by fixtures). missingBlobDigests flags manifests referencing blobs absent from disk.",
+                "referenceCounts maps each digest to the number of manifests that use it: zero references means orphaned, and multiple references mean shared. Orphan attribution uses this count directly. missingBlobDigests identifies manifests that refer to blobs absent from disk.",
                 "modelGroups(from:) buckets by baseName and sorts variants newest-first by manifest mtime; looksLikeQuantTag regex-matches Q4_K_M/IQ3_XS/Q8_0/F16-style tags. blobsUniqueTo(model:allModels:blobs:) is the per-model delete primitive — shared layers survive. isOllamaRunning probes ~/.ollama/ollama.pid with kill(pid, 0); EPERM (another user's process) correctly reports not-running.",
             ]),
         ],

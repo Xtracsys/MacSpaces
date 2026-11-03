@@ -6,9 +6,13 @@
   <img alt="Language" src="https://img.shields.io/badge/swift-5.9-orange">
 </p>
 
-A native macOS app (SwiftUI) for monitoring and reclaiming disk space, with
-purpose-built audits for local AI tooling. Open source under the Apache 2.0
-license, maintained by **Xtracsys LLC**.
+A native macOS app for understanding disk use and reclaiming space, with
+focused audits for local AI model stores. Cleanup stays deliberate: deletions
+go to Trash by default, and Ollama orphan cleanup checks a fresh audit before
+removal. [Read the Xtracsys orchestration playbook](https://github.com/Xtracsys/Xtracsys/blob/main/docs/ORCHESTRATION_GUIDE.md)
+for the planning and review workflow behind this project.
+
+Open source under the Apache 2.0 license, maintained by **Xtracsys LLC**.
 
 - **Ollama** — parses every manifest (both the classic `manifests/` tree and the
   new Ollama 0.34+ `manifests-v2/` layout), cross-references them against
