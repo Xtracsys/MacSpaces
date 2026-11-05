@@ -127,4 +127,4 @@ Copyright 2026 **Xtracsys LLC**. Licensed under the
 SPDX header convention.
 
 Questions about MacSpaces, security reports, or anything else about the
-project: **opensource@xtracsys.com**.
+project: **josh@xtracsys.com**.
